@@ -3,59 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>우리반 감정 놀이 - 쾌적 버전</title>
+    <title>우리반 감정 팡팡! - 소근육 클릭 모드</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <style>
         :root { --vh: 1vh; }
-        body { 
-            margin: 0; overflow: hidden; background: #000; 
-            font-family: 'Malgun Gothic', sans-serif; user-select: none; touch-action: none;
-            width: 100vw; height: calc(var(--vh, 1vh) * 100);
-        }
-        #bottom-ui {
-            position: absolute; bottom: env(safe-area-inset-bottom, 20px); left: 50%;
-            transform: translateX(-50%); z-index: 10;
-            display: flex; flex-direction: column; align-items: center; gap: 8px;
-            width: 90%; max-width: 400px; display: none;
-        }
-        #target-guide {
-            background: rgba(255, 255, 255, 0.95); padding: 5px 20px; border-radius: 40px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 3px solid #ff4785;
-            display: flex; align-items: center; gap: 10px;
-        }
-        #target-emoji { font-size: 40px; }
-        #score-panel { 
-            background: linear-gradient(135deg, #ff4785, #ff85a1); 
-            padding: 10px 30px; border-radius: 50px; border: 3px solid white;
-            color: white; text-align: center; width: 100%; box-sizing: border-box;
-        }
-        #score-num { font-size: 24px; font-weight: bold; }
-        #input_video { position: fixed; top: 0; left: 0; width: 100vw; height: calc(var(--vh, 1vh) * 100); object-fit: cover; transform: rotateY(180deg); }
-        #gameCanvas { position: fixed; top: 0; left: 0; width: 100vw; height: calc(var(--vh, 1vh) * 100); z-index: 5; }
-        #start-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: white; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .emoji-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-        .emoji-btn { font-size: 50px; border-radius: 20px; border: 4px solid #f0f0f0; background: white; aspect-ratio: 1/1; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Malgun Gothic', sans-serif; user-select: none; touch-action: none; width: 100vw; height: calc(var(--vh, 1vh) * 100); }
+        #setup-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: white; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
+        .speed-container { margin: 20px 0; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+        .speed-btn { padding: 15px 25px; font-size: 18px; border: 3px solid #eee; background: #f9f9f9; border-radius: 15px; cursor: pointer; font-weight: bold; }
+        .speed-btn.active { background: #ff4785; color: white; border-color: #ff4785; }
+        .emoji-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 20px; }
+        .emoji-btn { font-size: 45px; border-radius: 20px; border: 4px solid #f0f0f0; background: white; aspect-ratio: 1/1; cursor: pointer; }
+        #bottom-ui { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 10; display: flex; flex-direction: column; align-items: center; gap: 10px; width: 90%; max-width: 400px; display: none; }
+        #target-guide { background: rgba(255, 255, 255, 0.95); padding: 8px 25px; border-radius: 40px; border: 3px solid #ff4785; display: flex; align-items: center; gap: 10px; }
+        #score-panel { background: linear-gradient(135deg, #ff4785, #ff85a1); padding: 12px 40px; border-radius: 50px; border: 4px solid white; color: white; text-align: center; width: 100%; box-sizing: border-box; }
+        #input_video { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; transform: rotateY(180deg); }
+        #gameCanvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 5; }
     </style>
 </head>
 <body>
 
-<div id="start-screen">
-    <h2 style="margin-bottom:20px;">어떤 기분을 찾을까요?</h2>
+<div id="setup-screen">
+    <h1>기분 팡팡! (양손 모드)</h1>
+    <p>엄지와 검지를 '집게'처럼 모으면 터져요!</p>
+    <div class="speed-container" id="speed-selector">
+        <button class="speed-btn active" onclick="setSpeed(10)">10</button>
+        <button class="speed-btn" onclick="setSpeed(20)">20</button>
+        <button class="speed-btn" onclick="setSpeed(30)">30</button>
+        <button class="speed-btn" onclick="setSpeed(40)">40</button>
+        <button class="speed-btn" onclick="setSpeed(50)">50</button>
+    </div>
     <div class="emoji-grid" id="emoji-grid"></div>
 </div>
 
 <div id="bottom-ui">
-    <div id="target-guide">
-        <span id="target-emoji"></span>
-        <span style="font-weight:bold;">를 찾으세요!</span>
-    </div>
-    <div id="score-panel">
-        <div id="score-num">잘하고 있어요! <span id="score">0</span>점</div>
-    </div>
+    <div id="target-guide"><span id="target-emoji" style="font-size: 40px;"></span><span style="font-weight:bold;">를 집으세요!</span></div>
+    <div id="score-panel"><div style="font-size: 26px; font-weight: bold;">점수: <span id="score">0</span>점</div></div>
 </div>
 
-<video id="input_video" playsinline></video>
+<video id="input_video" playsinline style="display:none;"></video>
 <canvas id="gameCanvas"></canvas>
 
 <script>
@@ -63,25 +50,23 @@
     const canvasElement = document.getElementById('gameCanvas');
     const canvasCtx = canvasElement.getContext('2d');
     const scoreElement = document.getElementById('score');
-    const startScreen = document.getElementById('start-screen');
+    const setupScreen = document.getElementById('setup-screen');
     const bottomUI = document.getElementById('bottom-ui');
     const targetEmojiDisplay = document.getElementById('target-emoji');
 
     let score = 0;
     let emojis = [];
     let particles = [];
-    let handPoints = [];
+    let pinchPoints = []; // 집기 동작이 발생한 지점들
     let gameStarted = false;
     let targetEmoji = '';
+    let gameSpeed = 10;
     const emotionList = ['😊', '😆', '🥳', '😢', '😡', '😲', '😒', '😱'];
 
-    function setVh() {
-        document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
-        canvasElement.width = window.innerWidth;
-        canvasElement.height = window.innerHeight;
-    }
-    window.addEventListener('resize', setVh);
-    setVh();
+    window.setSpeed = (val) => {
+        gameSpeed = val;
+        document.querySelectorAll('.speed-btn').forEach(b => b.classList.toggle('active', b.innerText == val));
+    };
 
     emotionList.forEach(emoji => {
         const btn = document.createElement('button');
@@ -90,60 +75,49 @@
         btn.onclick = () => {
             targetEmoji = emoji;
             targetEmojiDisplay.innerText = emoji;
-            startScreen.style.display = 'none';
+            setupScreen.style.display = 'none';
             bottomUI.style.display = 'flex';
             gameStarted = true;
-            initEmojis();
+            for(let i=0; i<3; i++) emojis.push(new RandomEmotion());
         };
         document.getElementById('emoji-grid').appendChild(btn);
     });
 
-    class Emotion {
-        constructor(laneIndex) {
-            this.laneIndex = laneIndex; // 레인 시스템 도입
-            this.init();
-        }
+    class RandomEmotion {
+        constructor() { this.size = 130; this.init(); }
         init() {
-            this.size = 100;
-            // 좁은 모바일 화면을 4개 구역으로 나눠 겹침 방지
-            const laneWidth = canvasElement.width / 4;
-            this.x = (this.laneIndex * laneWidth) + (laneWidth / 2);
-            this.y = -Math.random() * 500 - 100; // 시작 높이차를 둬서 세로 겹침 방지
-            this.speed = Math.random() * 0.5 + 1.8; // 속도 상향 (1.8 ~ 2.3)
+            this.x = Math.random() * (canvasElement.width - 200) + 100;
+            this.y = Math.random() * (canvasElement.height - 300) + 100;
             this.text = emotionList[Math.floor(Math.random() * emotionList.length)];
             this.isPopping = false;
             this.popLife = 1.0;
+            this.timer = 0;
+            this.maxTime = (60 / (gameSpeed / 10)) * 2.5; 
         }
         update() {
             if (this.isPopping) {
-                this.popLife -= 0.04;
+                this.popLife -= 0.05;
                 if (this.popLife <= 0) this.init();
                 return;
             }
-            this.y += this.speed;
-            if (this.y > canvasElement.height + 100) this.init();
+            this.timer++;
+            if (this.timer > this.maxTime) this.init();
 
-            let hit = false;
-            // 카메라 인식
-            for (let p of handPoints) {
-                if (Math.hypot(this.x - p.x, this.y - p.y) < this.size * 0.6) { hit = true; break; }
-            }
-            // 터치/마우스 인식
-            if (Math.hypot(this.x - touchX, this.y - touchY) < this.size * 0.7) hit = true;
-
-            if (hit) {
-                this.isPopping = true;
-                const isCorrect = this.text === targetEmoji;
-                if (isCorrect) { score += 10; scoreElement.innerText = score; }
-                for(let i=0; i<10; i++) particles.push({x:this.x, y:this.y, sx:Math.random()*10-5, sy:Math.random()*10-5, life:1, c:isCorrect});
+            for (let p of pinchPoints) {
+                if (Math.hypot(this.x - p.x, this.y - p.y) < this.size * 0.8) {
+                    this.isPopping = true;
+                    const isCorrect = this.text === targetEmoji;
+                    if (isCorrect) { score += 10; scoreElement.innerText = score; }
+                    for(let i=0; i<10; i++) particles.push({x:this.x, y:this.y, sx:Math.random()*10-5, sy:Math.random()*10-5, life:1, c:isCorrect});
+                    break;
+                }
             }
         }
         draw() {
             canvasCtx.save();
             canvasCtx.globalAlpha = this.popLife;
-            canvasCtx.translate(this.x, this.y);
-            // 카메라 모드면 텍스트 반전
-            if (videoElement.style.display !== 'none') canvasCtx.scale(-1, 1);
+            let drawX = canvasElement.width - this.x; // 거울 반전 보정
+            canvasCtx.translate(drawX, this.y);
             canvasCtx.font = `${this.size}px serif`;
             canvasCtx.textAlign = 'center';
             canvasCtx.textBaseline = 'middle';
@@ -152,41 +126,58 @@
         }
     }
 
-    function initEmojis() {
-        emojis = [new Emotion(0), new Emotion(1), new Emotion(2), new Emotion(3)];
-    }
+    const hands = new Hands({ locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}` });
+    hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.6, minTrackingConfidence: 0.6 });
 
-    let touchX = -1000, touchY = -1000;
-    const handleMove = (e) => {
-        const x = e.touches ? e.touches[0].clientX : e.clientX;
-        const y = e.touches ? e.touches[0].clientY : e.clientY;
-        touchX = (videoElement.style.display !== 'none') ? canvasElement.width - x : x;
-        touchY = y;
-    };
-    window.addEventListener('mousemove', handleMove);
-    window.addEventListener('touchstart', handleMove);
-    window.addEventListener('touchmove', handleMove);
-
-    const hands = new Hands({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
-    hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.5 });
     hands.onResults((results) => {
         canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-        handPoints = [];
+        pinchPoints = [];
+
         if (results.multiHandLandmarks) {
-            for (const landmarks of results.multiHandLandmarks) {
-                const px = landmarks[9].x * canvasElement.width;
-                const py = landmarks[9].y * canvasElement.height;
-                handPoints.push({x: px, y: py});
-                canvasCtx.fillStyle = 'rgba(255, 71, 133, 0.4)';
-                canvasCtx.beginPath(); canvasCtx.arc(px, py, 60, 0, Math.PI*2); canvasCtx.fill();
-            }
+            results.multiHandLandmarks.forEach((landmarks) => {
+                // 형광색 막대(스켈레톤) 그리기
+                canvasCtx.strokeStyle = '#00FF00'; // 형광 연두
+                canvasCtx.lineWidth = 8;
+                canvasCtx.lineJoin = 'round';
+                
+                // 손가락 연결 정의
+                const fingerJoints = [[0,1,2,3,4], [0,5,6,7,8], [5,9,10,11,12], [9,13,14,15,16], [13,17,18,19,20], [0,17]];
+                fingerJoints.forEach(joint => {
+                    canvasCtx.beginPath();
+                    joint.forEach((idx, i) => {
+                        const x = (1 - landmarks[idx].x) * canvasElement.width;
+                        const y = landmarks[idx].y * canvasElement.height;
+                        if(i === 0) canvasCtx.moveTo(x, y); else canvasCtx.lineTo(x, y);
+                    });
+                    canvasCtx.stroke();
+                });
+
+                // 엄지(4)와 검지(8) 끝 좌표
+                const thumb = landmarks[4];
+                const index = landmarks[8];
+                const distance = Math.hypot(thumb.x - index.x, thumb.y - index.y);
+
+                // 집기 인식 (거리가 가까우면)
+                if (distance < 0.05) {
+                    const px = ((thumb.x + index.x) / 2) * canvasElement.width;
+                    const py = ((thumb.y + index.y) / 2) * canvasElement.height;
+                    pinchPoints.push({x: px, y: py});
+                    
+                    // 집기 효과 표시
+                    canvasCtx.fillStyle = '#FFFF00';
+                    canvasCtx.beginPath();
+                    canvasCtx.arc((1-thumb.x)*canvasElement.width, thumb.y*canvasElement.height, 20, 0, Math.PI*2);
+                    canvasCtx.fill();
+                }
+            });
         }
+
         if (gameStarted) {
             emojis.forEach(e => { e.update(); e.draw(); });
-            particles.forEach((p, i) => {
+            particles.forEach(p => {
                 p.x += p.sx; p.y += p.sy; p.life -= 0.03;
-                canvasCtx.fillStyle = p.c ? `rgba(255,215,0,${p.life})` : `rgba(255,255,255,${p.life})`;
-                canvasCtx.beginPath(); canvasCtx.arc(p.x, p.y, 5, 0, Math.PI*2); canvasCtx.fill();
+                canvasCtx.fillStyle = p.c ? `rgba(255,255,0,${p.life})` : `rgba(255,255,255,${p.life})`;
+                canvasCtx.beginPath(); canvasCtx.arc(canvasElement.width - p.x, p.y, 6, 0, Math.PI*2); canvasCtx.fill();
             });
             particles = particles.filter(p => p.life > 0);
         }
@@ -196,14 +187,11 @@
         onFrame: async () => { await hands.send({image: videoElement}); },
         width: 1280, height: 720
     });
-    camera.start().catch(() => {
-        // 카메라 없을 때 루프
-        setInterval(() => {
-            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-            if (gameStarted) {
-                emojis.forEach(e => { e.update(); e.draw(); });
-            }
-        }, 1000/30);
+    camera.start().then(() => videoElement.style.display = 'block');
+    
+    window.addEventListener('resize', () => {
+        canvasElement.width = window.innerWidth;
+        canvasElement.height = window.innerHeight;
     });
 </script>
 </body>
