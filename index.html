@@ -3,21 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>우리반 감정 팡팡! - 크기 최적화 모드</title>
+    <title>우리반 감정 팡팡! - 아이폰 최적화</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <style>
         :root { --vh: 1vh; }
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Malgun Gothic', sans-serif; user-select: none; touch-action: none; width: 100vw; height: calc(var(--vh, 1vh) * 100); }
-        #setup-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: white; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
-        .speed-container { margin: 20px 0; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
-        .speed-btn { padding: 12px 20px; font-size: 16px; border: 3px solid #eee; background: #f9f9f9; border-radius: 12px; cursor: pointer; font-weight: bold; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: -apple-system, sans-serif; user-select: none; touch-action: none; width: 100vw; height: calc(var(--vh, 1vh) * 100); }
+        
+        /* 설정 화면 - 아이폰 폰트 및 여백 적용 */
+        #setup-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: white; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; box-sizing: border-box; }
+        .speed-container { margin: 15px 0; display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+        .speed-btn { padding: 10px 18px; font-size: 15px; border: 2px solid #eee; background: #f9f9f9; border-radius: 12px; cursor: pointer; font-weight: 600; }
         .speed-btn.active { background: #ff4785; color: white; border-color: #ff4785; }
-        .emoji-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 15px; }
-        .emoji-btn { font-size: 40px; border-radius: 15px; border: 4px solid #f0f0f0; background: white; aspect-ratio: 1/1; cursor: pointer; }
-        #bottom-ui { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 10; display: flex; flex-direction: column; align-items: center; gap: 8px; width: 90%; max-width: 400px; display: none; }
-        #target-guide { background: rgba(255, 255, 255, 0.95); padding: 5px 20px; border-radius: 40px; border: 3px solid #ff4785; display: flex; align-items: center; gap: 8px; }
-        #score-panel { background: linear-gradient(135deg, #ff4785, #ff85a1); padding: 10px 30px; border-radius: 50px; border: 3px solid white; color: white; text-align: center; width: 100%; box-sizing: border-box; }
+        .emoji-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; width: 100%; max-width: 320px; }
+        .emoji-btn { font-size: 32px; border-radius: 12px; border: 3px solid #f0f0f0; background: white; aspect-ratio: 1/1; cursor: pointer; }
+        
+        /* 하단 UI - 아이폰 하단 홈바(Safe Area) 고려 */
+        #bottom-ui { position: absolute; bottom: calc(env(safe-area-inset-bottom) + 20px); left: 50%; transform: translateX(-50%); z-index: 10; display: flex; flex-direction: column; align-items: center; gap: 8px; width: 85%; display: none; }
+        #target-guide { background: rgba(255, 255, 255, 0.9); padding: 5px 15px; border-radius: 30px; border: 2px solid #ff4785; display: flex; align-items: center; gap: 8px; }
+        #score-panel { background: linear-gradient(135deg, #ff4785, #ff85a1); padding: 8px 20px; border-radius: 40px; border: 3px solid white; color: white; text-align: center; width: 100%; box-sizing: border-box; }
+        
         #input_video { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; transform: rotateY(180deg); }
         #gameCanvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 5; }
     </style>
@@ -25,8 +30,8 @@
 <body>
 
 <div id="setup-screen">
-    <h2 style="margin-bottom:10px;">감정 팡팡! (작은 이모티콘 모드)</h2>
-    <p style="font-size: 14px; color: #666;">속도를 고르고 기분을 선택하면 시작해요!</p>
+    <h2 style="margin:0 0 10px 0; font-size: 22px;">감정 팡팡!</h2>
+    <p style="font-size: 13px; color: #888; margin-bottom: 15px;">속도를 정하고 이모티콘을 선택하세요.</p>
     <div class="speed-container">
         <button class="speed-btn active" onclick="setSpeed(10)">10</button>
         <button class="speed-btn" onclick="setSpeed(20)">20</button>
@@ -38,8 +43,8 @@
 </div>
 
 <div id="bottom-ui">
-    <div id="target-guide"><span id="target-emoji" style="font-size: 35px;"></span><span style="font-weight:bold; font-size:16px;">를 집으세요!</span></div>
-    <div id="score-panel"><div style="font-size: 22px; font-weight: bold;">점수: <span id="score">0</span>점</div></div>
+    <div id="target-guide"><span id="target-emoji" style="font-size: 30px;"></span><span style="font-weight:600; font-size:14px;">를 집으세요!</span></div>
+    <div id="score-panel"><div style="font-size: 20px; font-weight: 700;">점수: <span id="score">0</span></div></div>
 </div>
 
 <video id="input_video" playsinline style="display:none;"></video>
@@ -68,6 +73,14 @@
         document.querySelectorAll('.speed-btn').forEach(b => b.classList.toggle('active', b.innerText == val));
     };
 
+    function setVh() {
+        document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
+        canvasElement.width = window.innerWidth;
+        canvasElement.height = window.innerHeight;
+    }
+    window.addEventListener('resize', setVh);
+    setVh();
+
     emotionList.forEach(emoji => {
         const btn = document.createElement('button');
         btn.className = 'emoji-btn';
@@ -78,28 +91,32 @@
             setupScreen.style.display = 'none';
             bottomUI.style.display = 'flex';
             gameStarted = true;
-            for(let i=0; i<4; i++) emojis.push(new RandomEmotion()); // 개수를 4개로 소폭 늘림
+            // 모바일은 화면이 좁으므로 동시 노출 개수를 3개로 조정하여 겹침 방지
+            for(let i=0; i<3; i++) emojis.push(new RandomEmotion());
         };
         document.getElementById('emoji-grid').appendChild(btn);
     });
 
     class RandomEmotion {
         constructor() { 
-            this.size = 80; // 크기를 130에서 80으로 축소
+            // 아이폰 화면 너비의 약 18% 정도로 크기 자동 계산 (과하게 커지는 것 방지)
+            this.size = Math.min(canvasElement.width * 0.18, 70); 
             this.init(); 
         }
         init() {
-            this.x = Math.random() * (canvasElement.width - 150) + 75;
-            this.y = Math.random() * (canvasElement.height - 250) + 75;
+            // 이모티콘 간의 겹침을 줄이기 위해 여백(Margin) 확보
+            const margin = this.size + 20;
+            this.x = Math.random() * (canvasElement.width - margin * 2) + margin;
+            this.y = Math.random() * (canvasElement.height - margin * 3) + margin;
             this.text = emotionList[Math.floor(Math.random() * emotionList.length)];
             this.isPopping = false;
             this.popLife = 1.0;
             this.timer = 0;
-            this.maxTime = (60 / (gameSpeed / 10)) * 2.2; 
+            this.maxTime = (60 / (gameSpeed / 10)) * 2.0; 
         }
         update() {
             if (this.isPopping) {
-                this.popLife -= 0.06;
+                this.popLife -= 0.07;
                 if (this.popLife <= 0) this.init();
                 return;
             }
@@ -107,12 +124,11 @@
             if (this.timer > this.maxTime) this.init();
 
             for (let p of pinchPoints) {
-                // 작아진 크기에 맞춰 판정 범위를 0.9배로 살짝 넉넉하게 잡음
-                if (Math.hypot(this.x - p.x, this.y - p.y) < this.size * 0.9) {
+                if (Math.hypot(this.x - p.x, this.y - p.y) < this.size * 1.1) {
                     this.isPopping = true;
                     const isCorrect = this.text === targetEmoji;
                     if (isCorrect) { score += 10; scoreElement.innerText = score; }
-                    for(let i=0; i<8; i++) particles.push({x:this.x, y:this.y, sx:Math.random()*8-4, sy:Math.random()*8-4, life:1, c:isCorrect});
+                    for(let i=0; i<6; i++) particles.push({x:this.x, y:this.y, sx:Math.random()*6-3, sy:Math.random()*6-3, life:1, c:isCorrect});
                     break;
                 }
             }
@@ -122,9 +138,10 @@
             canvasCtx.globalAlpha = this.popLife;
             let drawX = canvasElement.width - this.x;
             canvasCtx.translate(drawX, this.y);
-            canvasCtx.font = `${this.size}px serif`;
+            // 세로로 길어 보이는 현상을 막기 위해 폰트 렌더링 최적화
+            canvasCtx.font = `${this.size}px "Apple Color Emoji", "Segoe UI Emoji", serif`;
             canvasCtx.textAlign = 'center';
-            canvasCtx.textBaseline = 'middle';
+            canvasCtx.textBaseline = 'middle'; 
             canvasCtx.fillText(this.text, 0, 0);
             canvasCtx.restore();
         }
@@ -139,9 +156,8 @@
 
         if (results.multiHandLandmarks) {
             results.multiHandLandmarks.forEach((landmarks) => {
-                // 형광색 막대
-                canvasCtx.strokeStyle = '#39FF14'; // 더 밝은 네온 그린
-                canvasCtx.lineWidth = 6;
+                canvasCtx.strokeStyle = '#39FF14'; 
+                canvasCtx.lineWidth = 5;
                 canvasCtx.lineJoin = 'round';
                 
                 const fingerJoints = [[0,1,2,3,4], [0,5,6,7,8], [5,9,10,11,12], [9,13,14,15,16], [13,17,18,19,20], [0,17]];
@@ -159,14 +175,14 @@
                 const index = landmarks[8];
                 const distance = Math.hypot(thumb.x - index.x, thumb.y - index.y);
 
-                if (distance < 0.05) {
+                if (distance < 0.06) {
                     const px = ((thumb.x + index.x) / 2) * canvasElement.width;
                     const py = ((thumb.y + index.y) / 2) * canvasElement.height;
                     pinchPoints.push({x: px, y: py});
                     
                     canvasCtx.fillStyle = '#FFFF00';
                     canvasCtx.beginPath();
-                    canvasCtx.arc((1-thumb.x)*canvasElement.width, thumb.y*canvasElement.height, 15, 0, Math.PI*2);
+                    canvasCtx.arc((1-thumb.x)*canvasElement.width, thumb.y*canvasElement.height, 12, 0, Math.PI*2);
                     canvasCtx.fill();
                 }
             });
@@ -175,9 +191,9 @@
         if (gameStarted) {
             emojis.forEach(e => { e.update(); e.draw(); });
             particles.forEach(p => {
-                p.x += p.sx; p.y += p.sy; p.life -= 0.04;
+                p.x += p.sx; p.y += p.sy; p.life -= 0.05;
                 canvasCtx.fillStyle = p.c ? `rgba(255,255,0,${p.life})` : `rgba(255,255,255,${p.life})`;
-                canvasCtx.beginPath(); canvasCtx.arc(canvasElement.width - p.x, p.y, 4, 0, Math.PI*2); canvasCtx.fill();
+                canvasCtx.beginPath(); canvasCtx.arc(canvasElement.width - p.x, p.y, 3, 0, Math.PI*2); canvasCtx.fill();
             });
             particles = particles.filter(p => p.life > 0);
         }
@@ -188,11 +204,6 @@
         width: 1280, height: 720
     });
     camera.start().then(() => videoElement.style.display = 'block');
-    
-    window.addEventListener('resize', () => {
-        canvasElement.width = window.innerWidth;
-        canvasElement.height = window.innerHeight;
-    });
 </script>
 </body>
 </html>
