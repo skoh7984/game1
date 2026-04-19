@@ -2,40 +2,78 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>손바닥 팡팡: 감정 선택 모드</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>모바일 감정 팡팡</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: #f0f4f8; font-family: 'Malgun Gothic', sans-serif; user-select: none; }
-        #ui { position: absolute; top: 20px; left: 20px; z-index: 10; background: rgba(255,255,255,0.9); padding: 15px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: none; }
-        #score-area { font-size: 24px; font-weight: bold; color: #2d3436; }
-        #target-display { font-size: 18px; color: #636e72; margin-top: 5px; }
+        :root { --vh: 1vh; }
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background: #f0f4f8; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            user-select: none; 
+            touch-action: none;
+            width: 100vw;
+            height: calc(var(--vh, 1vh) * 100);
+        }
+        #ui { 
+            position: absolute; 
+            top: env(safe-area-inset-top, 20px); 
+            left: 20px; 
+            z-index: 10; 
+            background: rgba(255,255,255,0.9); 
+            padding: 10px 15px; 
+            border-radius: 12px; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); 
+            display: none; 
+        }
+        #score-area { font-size: 20px; font-weight: bold; color: #2d3436; }
         
-        /* 시작 화면 (이모티콘 선택) */
-        #start-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(255,255,255,0.95); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        #start-screen h1 { color: #2d3436; margin-bottom: 30px; }
-        .emoji-grid { display: grid; grid-template-columns: repeat(4, 100px); gap: 20px; }
-        .emoji-btn { font-size: 50px; cursor: pointer; border: none; background: white; border-radius: 20px; transition: transform 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 10px; }
-        .emoji-btn:hover { transform: scale(1.2); background: #e1f5fe; }
+        #start-screen { 
+            position: fixed; top: 0; left: 0; width: 100vw; height: calc(var(--vh, 1vh) * 100);
+            background: white; z-index: 100; display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; padding: 20px; box-sizing: border-box;
+        }
+        #start-screen h1 { font-size: 22px; text-align: center; color: #2d3436; margin-bottom: 20px; word-break: keep-all; }
+        .emoji-grid { 
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 15px; 
+            width: 100%;
+            max-width: 400px;
+        }
+        .emoji-btn { 
+            font-size: 40px; border: none; background: #f8f9fa; 
+            border-radius: 15px; aspect-ratio: 1/1;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .emoji-btn:active { background: #e1f5fe; transform: scale(0.95); }
 
-        #input_video { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; transform: rotateY(180deg); opacity: 0.3; }
-        #gameCanvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; transform: rotateY(180deg); z-index: 5; }
+        #input_video { 
+            position: fixed; top: 0; left: 0; width: 100vw; height: calc(var(--vh, 1vh) * 100);
+            object-fit: cover; transform: rotateY(180deg); opacity: 0.3; 
+        }
+        #gameCanvas { 
+            position: fixed; top: 0; left: 0; width: 100vw; height: calc(var(--vh, 1vh) * 100);
+            z-index: 5; 
+        }
     </style>
 </head>
 <body>
 
 <div id="start-screen">
-    <h1>오늘 터뜨릴 감정을 골라보세요!</h1>
+    <h1>오늘 어떤 기분을<br>터뜨려 볼까요?</h1>
     <div class="emoji-grid" id="emoji-grid"></div>
 </div>
 
 <div id="ui">
     <div id="score-area">점수: <span id="score">0</span></div>
-    <div id="target-display">목표: <span id="target-text"></span></div>
+    <div id="target-display" style="font-size: 14px; color: #666;">목표: <span id="target-text" style="font-size: 20px;"></span></div>
 </div>
 
-<video id="input_video" playsinline style="display:none;"></video>
+<video id="input_video" playsinline></video>
 <canvas id="gameCanvas"></canvas>
 
 <script>
@@ -57,7 +95,17 @@
     let targetEmoji = '';
     const emotionList = ['😊', '😆', '🥳', '😢', '😡', '😲', '😒', '😱'];
 
-    // 1. 시작 화면 구성
+    // 모바일 브라우저 높이 보정
+    function setVh() {
+        let vh = window.innerHeight * 0.01;
+        document.documentElement.style.setProperty('--vh', `${vh}px`);
+        canvasElement.width = window.innerWidth;
+        canvasElement.height = window.innerHeight;
+    }
+    window.addEventListener('resize', setVh);
+    window.addEventListener('orientationchange', setVh);
+    setVh();
+
     emotionList.forEach(emoji => {
         const btn = document.createElement('button');
         btn.className = 'emoji-btn';
@@ -73,25 +121,19 @@
         ui.style.display = 'block';
         gameStarted = true;
         initEmojis();
+        if(!useCamera) updateGame();
     }
-
-    function resize() {
-        canvasElement.width = window.innerWidth;
-        canvasElement.height = window.innerHeight;
-    }
-    window.addEventListener('resize', resize);
-    resize();
 
     class Particle {
         constructor(x, y, isTarget) {
             this.x = x; this.y = y;
-            this.size = Math.random() * 8 + 2;
-            this.speedX = Math.random() * 10 - 5;
-            this.speedY = Math.random() * 10 - 5;
+            this.size = Math.random() * 5 + 2;
+            this.speedX = Math.random() * 8 - 4;
+            this.speedY = Math.random() * 8 - 4;
             this.life = 1.0;
-            this.color = isTarget ? '255, 215, 0' : '180, 180, 180';
+            this.color = isTarget ? '255, 215, 0' : '200, 200, 200';
         }
-        update() { this.x += this.speedX; this.y += this.speedY; this.life -= 0.03; }
+        update() { this.x += this.speedX; this.y += this.speedY; this.life -= 0.04; }
         draw() {
             canvasCtx.fillStyle = `rgba(${this.color}, ${this.life})`;
             canvasCtx.beginPath();
@@ -106,8 +148,8 @@
             this.x = Math.random() * canvasElement.width;
             this.y = -50;
             this.text = emotionList[Math.floor(Math.random() * emotionList.length)];
-            this.size = Math.random() * 20 + 60; // 아이들을 위해 크기를 조금 더 키움
-            this.speed = Math.random() * 2 + 1;
+            this.size = Math.random() * 15 + 45;
+            this.speed = Math.random() * 1.5 + 1.2;
         }
         update() {
             if (!gameStarted) return;
@@ -115,79 +157,102 @@
             if (this.y > canvasElement.height + 50) this.init();
             
             let hit = false;
-            for (let point of handPoints) {
-                const dist = Math.hypot(this.x - point.x, this.y - point.y);
-                if (dist < this.size * 0.7) { hit = true; break; }
+            if (useCamera) {
+                // 카메라 모드일 때는 캔버스 반전(rotateY)이 적용되어 있으므로 그대로 사용
+                for (let point of handPoints) {
+                    if (Math.hypot(this.x - point.x, this.y - point.y) < this.size * 0.7) { hit = true; break; }
+                }
+            } else {
+                // 터치 모드 (터치는 캔버스 반전 영향을 안 받으므로 좌표 보정)
+                if (Math.hypot(this.x - touchX, this.y - touchY) < this.size * 0.8) hit = true;
             }
 
             if (hit) {
                 if (this.text === targetEmoji) {
                     score += 10;
                     scoreElement.innerText = score;
-                    for(let i=0; i<15; i++) particles.push(new Particle(this.x, this.y, true));
+                    for(let i=0; i<10; i++) particles.push(new Particle(this.x, this.y, true));
                 } else {
-                    for(let i=0; i<5; i++) particles.push(new Particle(this.x, this.y, false));
+                    for(let i=0; i<4; i++) particles.push(new Particle(this.x, this.y, false));
                 }
                 this.init();
             }
         }
         draw() {
-            canvasCtx.font = `${this.size}px serif`;
-            canvasCtx.textAlign = 'center';
-            canvasCtx.fillText(this.text, this.x, this.y);
+            canvasCtx.save();
+            if (useCamera) { 
+                // 카메라 모드일 때만 텍스트를 다시 반전시켜서 똑바로 보이게 함
+                canvasCtx.translate(this.x, this.y);
+                canvasCtx.scale(-1, 1);
+                canvasCtx.font = `${this.size}px serif`;
+                canvasCtx.fillText(this.text, 0, 0);
+            } else {
+                canvasCtx.font = `${this.size}px serif`;
+                canvasCtx.textAlign = 'center';
+                canvasCtx.fillText(this.text, this.x, this.y);
+            }
+            canvasCtx.restore();
         }
     }
 
     function initEmojis() {
-        emojis = [];
-        for (let i = 0; i < 12; i++) emojis.push(new Emotion());
+        for (let i = 0; i < 8; i++) emojis.push(new Emotion());
     }
 
-    // 2. 손바닥 중심 및 모든 마디 인식 로직
+    let touchX = -1000, touchY = -1000;
+    const handleTouch = (e) => {
+        touchX = e.touches ? e.touches[0].clientX : e.clientX;
+        touchY = e.touches ? e.touches[0].clientY : e.clientY;
+    };
+    window.addEventListener('touchstart', handleTouch);
+    window.addEventListener('touchmove', handleTouch);
+    window.addEventListener('mousedown', handleTouch);
+
     const hands = new Hands({
         locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
     });
 
-    hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.5 });
+    hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.5 });
     hands.onResults((results) => {
         canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
         handPoints = [];
-        
         if (results.multiHandLandmarks) {
             for (const landmarks of results.multiHandLandmarks) {
-                // 손바닥 중심점 계산 (손목, 검지 시작점, 소지 시작점의 평균)
-                const palmCenterX = (landmarks[0].x + landmarks[5].x + landmarks[17].x) / 3 * canvasElement.width;
-                const palmCenterY = (landmarks[0].y + landmarks[5].y + landmarks[17].y) / 3 * canvasElement.height;
-                handPoints.push({x: palmCenterX, y: palmCenterY});
-
-                // 모든 마디 추가
                 landmarks.forEach(point => {
                     handPoints.push({x: point.x * canvasElement.width, y: point.y * canvasElement.height});
                 });
-
-                // 시각적 피드백 (손바닥 중심에 큰 원)
-                canvasCtx.fillStyle = 'rgba(0, 255, 255, 0.2)';
-                canvasCtx.beginPath();
-                canvasCtx.arc(palmCenterX, palmCenterY, 50, 0, Math.PI * 2);
-                canvasCtx.fill();
+                const palmX = (landmarks[0].x + landmarks[5].x + landmarks[17].x) / 3 * canvasElement.width;
+                const palmY = (landmarks[0].y + landmarks[5].y + landmarks[17].y) / 3 * canvasElement.height;
+                handPoints.push({x: palmX, y: palmY});
             }
         }
         updateGame();
     });
 
     function updateGame() {
+        if (!useCamera) canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
         if (gameStarted) {
             emojis.forEach(e => { e.update(); e.draw(); });
             particles = particles.filter(p => p.life > 0);
             particles.forEach(p => { p.update(); p.draw(); });
         }
+        if (!useCamera) requestAnimationFrame(updateGame);
     }
 
     const camera = new Camera(videoElement, {
         onFrame: async () => { await hands.send({image: videoElement}); },
         width: 1280, height: 720
     });
-    camera.start();
+
+    camera.start().then(() => {
+        useCamera = true;
+        canvasElement.style.transform = "rotateY(180deg)"; // 카메라 모드일 때만 반전
+        videoElement.style.display = 'block';
+    }).catch(() => {
+        useCamera = false;
+        canvasElement.style.transform = "none";
+        updateGame();
+    });
 </script>
 </body>
 </html>
