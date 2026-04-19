@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>우리반 감정 놀이 - 하단 점수판</title>
+    <title>우리반 감정 놀이 - 통합 버전</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <style>
@@ -14,38 +14,59 @@
             width: 100vw; height: calc(var(--vh, 1vh) * 100);
         }
         
-        /* 상단: 목표 가이드 (더 깔끔하게) */
-        #target-guide {
-            position: absolute; top: env(safe-area-inset-top, 20px); left: 50%;
-            transform: translateX(-50%); z-index: 10;
-            background: rgba(255, 255, 255, 0.9); padding: 10px 30px; border-radius: 50px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: none; border: 3px solid #ff4785;
-            text-align: center; min-width: 200px;
-        }
-        
-        /* 하단: 점수판 (요청하신 부분) */
-        #score-panel { 
+        /* 통합 UI 컨테이너: PC에서는 가로로 넓게, 모바일에서는 세로로 */
+        #bottom-ui {
             position: absolute; bottom: env(safe-area-inset-bottom, 30px); left: 50%;
-            transform: translateX(-50%); z-index: 10; 
-            background: linear-gradient(135deg, #ff4785, #ff85a1); 
-            padding: 15px 40px; border-radius: 50px; 
-            box-shadow: 0 8px 25px rgba(255, 71, 133, 0.4); display: none;
-            color: white; text-align: center; border: 4px solid white;
+            transform: translateX(-50%); z-index: 10;
+            display: flex; flex-direction: row; align-items: flex-end; justify-content: center; gap: 20px;
+            width: 95%; max-width: 1000px; display: none;
         }
-        #score-text { font-size: 32px; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.2); }
+
+        /* 1. 목표 안내창 */
+        #target-guide {
+            background: rgba(255, 255, 255, 0.95); padding: 10px 25px; border-radius: 40px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 4px solid #ff4785;
+            text-align: center; display: flex; align-items: center; gap: 15px; white-space: nowrap;
+        }
+        #target-emoji { font-size: 50px; }
+        #target-text { font-size: 20px; color: #333; font-weight: bold; }
         
+        /* 2. 점수판 */
+        #score-panel { 
+            background: linear-gradient(135deg, #ff4785, #ff85a1); 
+            padding: 15px 45px; border-radius: 50px; 
+            box-shadow: 0 8px 25px rgba(255, 71, 133, 0.4);
+            color: white; text-align: center; border: 4px solid white; flex-grow: 0;
+        }
+        #score-num { font-size: 34px; font-weight: bold; white-space: nowrap; }
+        
+        /* 시작 화면 반응형 그리드 */
         #start-screen { 
             position: fixed; top: 0; left: 0; width: 100vw; height: calc(var(--vh, 1vh) * 100);
             background: white; z-index: 100; display: flex; flex-direction: column; 
             align-items: center; justify-content: center; padding: 20px; text-align: center;
         }
-        #start-screen h1 { font-size: 32px; color: #333; margin-bottom: 40px; word-break: keep-all; line-height: 1.4; }
-        .emoji-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; width: 100%; max-width: 500px; }
-        .emoji-btn { font-size: 60px; border: 5px solid #f0f0f0; background: white; border-radius: 30px; aspect-ratio: 1/1; cursor: pointer; }
-        .emoji-btn:active { background: #fff0f5; border-color: #ff4785; transform: scale(0.9); }
+        #start-screen h1 { font-size: clamp(24px, 5vw, 36px); color: #333; margin-bottom: 40px; word-break: keep-all; }
+        .emoji-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); 
+            gap: 20px; width: 100%; max-width: 600px; 
+        }
+        .emoji-btn { font-size: 60px; border: 5px solid #f0f0f0; background: white; border-radius: 30px; aspect-ratio: 1/1; cursor: pointer; transition: 0.2s; }
+        .emoji-btn:hover { background: #fff0f5; border-color: #ff4785; transform: scale(1.05); }
 
-        #input_video { position: fixed; top: 0; left: 0; width: 100vw; height: calc(var(--vh, 1vh) * 100); object-fit: cover; transform: rotateY(180deg); opacity: 1; }
+        /* 비디오 및 캔버스 설정 */
+        #input_video { position: fixed; top: 0; left: 0; width: 100vw; height: calc(var(--vh, 1vh) * 100); object-fit: cover; transform: rotateY(180deg); }
         #gameCanvas { position: fixed; top: 0; left: 0; width: 100vw; height: calc(var(--vh, 1vh) * 100); z-index: 5; }
+
+        /* 모바일용 레이아웃 조정 */
+        @media (max-width: 600px) {
+            #bottom-ui { flex-direction: column; align-items: center; gap: 10px; }
+            #target-guide { padding: 5px 20px; }
+            #target-emoji { font-size: 40px; }
+            #score-panel { padding: 10px 30px; width: 100%; }
+            #score-num { font-size: 26px; }
+        }
     </style>
 </head>
 <body>
@@ -55,13 +76,14 @@
     <div class="emoji-grid" id="emoji-grid"></div>
 </div>
 
-<div id="target-guide">
-    <span id="target-emoji" style="font-size: 50px;"></span>
-    <div style="font-size: 18px; color: #444; margin-top: 5px;">이 기분을 찾아보세요!</div>
-</div>
-
-<div id="score-panel">
-    <div id="score-text">참 잘했어요! <span id="score">0</span>점</div>
+<div id="bottom-ui">
+    <div id="target-guide">
+        <span id="target-emoji"></span>
+        <span id="target-text">이 기분을 찾아보세요!</span>
+    </div>
+    <div id="score-panel">
+        <div id="score-num">참 잘했어요! <span id="score">0</span>점</div>
+    </div>
 </div>
 
 <video id="input_video" playsinline></video>
@@ -75,8 +97,7 @@
     const startScreen = document.getElementById('start-screen');
     const emojiGrid = document.getElementById('emoji-grid');
     const targetEmojiDisplay = document.getElementById('target-emoji');
-    const uiGuide = document.getElementById('target-guide');
-    const uiScore = document.getElementById('score-panel');
+    const bottomUI = document.getElementById('bottom-ui');
 
     let score = 0;
     let emojis = [];
@@ -108,23 +129,22 @@
         targetEmoji = selectedEmoji;
         targetEmojiDisplay.innerText = targetEmoji;
         startScreen.style.display = 'none';
-        uiGuide.style.display = 'block';
-        uiScore.style.display = 'block';
+        bottomUI.style.display = 'flex';
         gameStarted = true;
         initEmojis();
-        if(!useCamera) updateGame();
+        if(!useCamera) updateLoop();
     }
 
     class Particle {
         constructor(x, y, isTarget) {
             this.x = x; this.y = y;
-            this.size = Math.random() * 10 + 5;
+            this.size = Math.random() * 12 + 6;
             this.speedX = Math.random() * 12 - 6;
             this.speedY = Math.random() * 12 - 6;
             this.life = 1.0;
             this.color = isTarget ? '255, 230, 0' : '255, 255, 255';
         }
-        update() { this.x += this.speedX; this.y += this.speedY; this.life -= 0.025; }
+        update() { this.x += this.speedX; this.y += this.speedY; this.life -= 0.02; }
         draw() {
             canvasCtx.fillStyle = `rgba(${this.color}, ${this.life})`;
             canvasCtx.beginPath();
@@ -149,20 +169,20 @@
     class Emotion {
         constructor() { this.init(); }
         init() {
-            this.size = 110;
-            this.speed = Math.random() * 0.3 + 1.1; 
+            this.size = 120; // PC 화면을 고려해 크기 유지
+            this.speed = Math.random() * 0.4 + 1.2; 
             this.isPopping = false;
             this.popLife = 1.0;
             this.y = -150;
             
             let foundPos = false;
             let attempts = 0;
-            while(!foundPos && attempts < 10) {
-                this.x = Math.random() * (canvasElement.width - 200) + 100;
+            while(!foundPos && attempts < 20) {
+                this.x = Math.random() * (canvasElement.width - 250) + 125;
                 foundPos = true;
                 for(let other of emojis) {
                     if(other !== this && !other.isPopping) {
-                        if(Math.abs(this.x - other.x) < this.size * 1.5) {
+                        if(Math.abs(this.x - other.x) < this.size * 1.8) {
                             foundPos = false;
                             break;
                         }
@@ -183,10 +203,13 @@
             if (this.y > canvasElement.height + 150) this.init();
             
             let hit = false;
+            // 카메라 인식 좌표
             for (let point of handPoints) {
                 if (Math.hypot(this.x - point.x, this.y - point.y) < this.size * 0.6) { hit = true; break; }
             }
-            if (!useCamera && Math.hypot(this.x - touchX, this.y - touchY) < this.size * 0.7) hit = true;
+            // 마우스/터치 좌표 (PC 환경 고려)
+            if (Math.hypot(this.x - touchX, this.y - touchY) < this.size * 0.7) hit = true;
+            
             if (hit) this.startPop();
         }
         startPop() {
@@ -201,6 +224,7 @@
         draw() {
             canvasCtx.save();
             canvasCtx.globalAlpha = this.isPopping ? this.popLife : 1.0;
+            // 카메라 사용 중이면 화면 반전에 맞춰 텍스트도 반전 보정
             if (useCamera) { 
                 canvasCtx.translate(this.x, this.y);
                 canvasCtx.scale(-1, 1);
@@ -209,6 +233,7 @@
             } else {
                 canvasCtx.font = `${this.size}px serif`;
                 canvasCtx.textAlign = 'center';
+                canvasCtx.textBaseline = 'middle';
                 canvasCtx.fillText(this.text, this.x, this.y);
             }
             canvasCtx.restore();
@@ -221,13 +246,16 @@
     }
 
     let touchX = -1000, touchY = -1000;
-    const handleTouch = (e) => {
-        touchX = e.touches ? e.touches[0].clientX : e.clientX;
-        touchY = e.touches ? e.touches[0].clientY : e.clientY;
+    const handleMove = (e) => {
+        const x = e.touches ? e.touches[0].clientX : e.clientX;
+        const y = e.touches ? e.touches[0].clientY : e.clientY;
+        // 카메라 모드(반전)일 때 마우스 좌표도 반전시켜서 계산
+        touchX = useCamera ? canvasElement.width - x : x;
+        touchY = y;
     };
-    window.addEventListener('touchstart', handleTouch);
-    window.addEventListener('touchmove', handleTouch);
-    window.addEventListener('mousedown', handleTouch);
+    window.addEventListener('touchstart', handleMove);
+    window.addEventListener('touchmove', handleMove);
+    window.addEventListener('mousemove', handleMove);
 
     const hands = new Hands({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
     hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.5 });
@@ -250,13 +278,19 @@
     });
 
     function updateGame() {
-        if (!useCamera) canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
         if (gameStarted) {
             emojis.forEach(e => { e.update(); e.draw(); });
             particles = particles.filter(p => p.life > 0);
             particles.forEach(p => { p.update(); p.draw(); });
         }
-        if (!useCamera) requestAnimationFrame(updateGame);
+    }
+
+    function updateLoop() {
+        if (!useCamera) {
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            updateGame();
+            requestAnimationFrame(updateLoop);
+        }
     }
 
     const camera = new Camera(videoElement, {
@@ -270,7 +304,7 @@
     }).catch(() => {
         useCamera = false;
         canvasElement.style.transform = "none";
-        updateGame();
+        updateLoop();
     });
 </script>
 </body>
