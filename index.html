@@ -3,25 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>감정 선택 팡팡</title>
+    <title>손바닥 팡팡: 감정 선택 모드</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: #f8f9fa; font-family: 'Arial', sans-serif; user-select: none; }
-        #ui { position: absolute; top: 20px; left: 20px; z-index: 10; background: rgba(255,255,255,0.8); padding: 15px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        #target-area { font-size: 20px; color: #333; margin-bottom: 5px; }
-        #target-emoji { font-size: 40px; display: block; text-align: center; margin: 10px 0; }
-        #score-area { font-size: 24px; font-weight: bold; color: #d81b60; border-top: 1px solid #ddd; pt: 5px; }
-        #input_video { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; transform: rotateY(180deg); opacity: 0.4; }
+        body { margin: 0; overflow: hidden; background: #f0f4f8; font-family: 'Malgun Gothic', sans-serif; user-select: none; }
+        #ui { position: absolute; top: 20px; left: 20px; z-index: 10; background: rgba(255,255,255,0.9); padding: 15px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: none; }
+        #score-area { font-size: 24px; font-weight: bold; color: #2d3436; }
+        #target-display { font-size: 18px; color: #636e72; margin-top: 5px; }
+        
+        /* 시작 화면 (이모티콘 선택) */
+        #start-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(255,255,255,0.95); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        #start-screen h1 { color: #2d3436; margin-bottom: 30px; }
+        .emoji-grid { display: grid; grid-template-columns: repeat(4, 100px); gap: 20px; }
+        .emoji-btn { font-size: 50px; cursor: pointer; border: none; background: white; border-radius: 20px; transition: transform 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 10px; }
+        .emoji-btn:hover { transform: scale(1.2); background: #e1f5fe; }
+
+        #input_video { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; transform: rotateY(180deg); opacity: 0.3; }
         #gameCanvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; transform: rotateY(180deg); z-index: 5; }
     </style>
 </head>
 <body>
 
+<div id="start-screen">
+    <h1>오늘 터뜨릴 감정을 골라보세요!</h1>
+    <div class="emoji-grid" id="emoji-grid"></div>
+</div>
+
 <div id="ui">
-    <div id="target-area">👇 이 기분을 찾아보세요!</div>
-    <div id="target-emoji">😊</div>
     <div id="score-area">점수: <span id="score">0</span></div>
+    <div id="target-display">목표: <span id="target-text"></span></div>
 </div>
 
 <video id="input_video" playsinline style="display:none;"></video>
@@ -32,15 +43,37 @@
     const canvasElement = document.getElementById('gameCanvas');
     const canvasCtx = canvasElement.getContext('2d');
     const scoreElement = document.getElementById('score');
-    const targetEmojiElement = document.getElementById('target-emoji');
+    const startScreen = document.getElementById('start-screen');
+    const emojiGrid = document.getElementById('emoji-grid');
+    const targetText = document.getElementById('target-text');
+    const ui = document.getElementById('ui');
 
     let score = 0;
     let emojis = [];
     let particles = [];
-    let handPoints = []; // 모든 손가락 마디 좌표 저장
+    let handPoints = []; 
     let useCamera = false;
+    let gameStarted = false;
     let targetEmoji = '';
-    const emotionList = ['😢', '😡', '😊', '😲', '😆', '😒', '😱', '🥳'];
+    const emotionList = ['😊', '😆', '🥳', '😢', '😡', '😲', '😒', '😱'];
+
+    // 1. 시작 화면 구성
+    emotionList.forEach(emoji => {
+        const btn = document.createElement('button');
+        btn.className = 'emoji-btn';
+        btn.innerText = emoji;
+        btn.onclick = () => startGame(emoji);
+        emojiGrid.appendChild(btn);
+    });
+
+    function startGame(selectedEmoji) {
+        targetEmoji = selectedEmoji;
+        targetText.innerText = targetEmoji;
+        startScreen.style.display = 'none';
+        ui.style.display = 'block';
+        gameStarted = true;
+        initEmojis();
+    }
 
     function resize() {
         canvasElement.width = window.innerWidth;
@@ -49,24 +82,18 @@
     window.addEventListener('resize', resize);
     resize();
 
-    // 목표 이모티콘 랜덤 설정
-    function setRandomTarget() {
-        targetEmoji = emotionList[Math.floor(Math.random() * emotionList.length)];
-        targetEmojiElement.innerText = targetEmoji;
-    }
-
     class Particle {
-        constructor(x, y, color) {
+        constructor(x, y, isTarget) {
             this.x = x; this.y = y;
             this.size = Math.random() * 8 + 2;
             this.speedX = Math.random() * 10 - 5;
             this.speedY = Math.random() * 10 - 5;
             this.life = 1.0;
-            this.color = color || '#ff69b4';
+            this.color = isTarget ? '255, 215, 0' : '180, 180, 180';
         }
         update() { this.x += this.speedX; this.y += this.speedY; this.life -= 0.03; }
         draw() {
-            canvasCtx.fillStyle = this.color.replace(')', `, ${this.life})`).replace('rgb', 'rgba');
+            canvasCtx.fillStyle = `rgba(${this.color}, ${this.life})`;
             canvasCtx.beginPath();
             canvasCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
             canvasCtx.fill();
@@ -79,40 +106,30 @@
             this.x = Math.random() * canvasElement.width;
             this.y = -50;
             this.text = emotionList[Math.floor(Math.random() * emotionList.length)];
-            this.size = Math.random() * 20 + 50;
-            this.speed = Math.random() * 2 + 1.2;
+            this.size = Math.random() * 20 + 60; // 아이들을 위해 크기를 조금 더 키움
+            this.speed = Math.random() * 2 + 1;
         }
         update() {
+            if (!gameStarted) return;
             this.y += this.speed;
             if (this.y > canvasElement.height + 50) this.init();
             
-            // 모든 손가락 마디(handPoints)와 충돌 체크
             let hit = false;
-            if (useCamera) {
-                for (let point of handPoints) {
-                    const dist = Math.hypot(this.x - point.x, this.y - point.y);
-                    if (dist < this.size * 0.6) { hit = true; break; }
-                }
-            } else {
-                // 마우스 모드 (반전 좌표 계산)
-                const dist = Math.hypot(this.x - (canvasElement.width - mouseX), this.y - mouseY);
-                if (dist < this.size * 0.6) hit = true;
+            for (let point of handPoints) {
+                const dist = Math.hypot(this.x - point.x, this.y - point.y);
+                if (dist < this.size * 0.7) { hit = true; break; }
             }
 
-            if (hit) this.pop();
-        }
-        pop() {
-            // 정답을 맞췄을 때만 점수 획득 및 목표 변경
-            if (this.text === targetEmoji) {
-                score += 10;
-                scoreElement.innerText = score;
-                for(let i=0; i<12; i++) particles.push(new Particle(this.x, this.y, 'rgb(255, 215, 0)')); // 금색 파티클
-                setRandomTarget(); // 목표 변경
-            } else {
-                // 틀린걸 잡았을 때 효과
-                for(let i=0; i<5; i++) particles.push(new Particle(this.x, this.y, 'rgb(200, 200, 200)'));
+            if (hit) {
+                if (this.text === targetEmoji) {
+                    score += 10;
+                    scoreElement.innerText = score;
+                    for(let i=0; i<15; i++) particles.push(new Particle(this.x, this.y, true));
+                } else {
+                    for(let i=0; i<5; i++) particles.push(new Particle(this.x, this.y, false));
+                }
+                this.init();
             }
-            this.init();
         }
         draw() {
             canvasCtx.font = `${this.size}px serif`;
@@ -121,12 +138,12 @@
         }
     }
 
-    for (let i = 0; i < 10; i++) emojis.push(new Emotion());
-    setRandomTarget();
+    function initEmojis() {
+        emojis = [];
+        for (let i = 0; i < 12; i++) emojis.push(new Emotion());
+    }
 
-    let mouseX = -1000, mouseY = -1000;
-    window.addEventListener('mousemove', (e) => { mouseX = e.clientX; mouseY = e.clientY; });
-
+    // 2. 손바닥 중심 및 모든 마디 인식 로직
     const hands = new Hands({
         locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
     });
@@ -138,44 +155,39 @@
         
         if (results.multiHandLandmarks) {
             for (const landmarks of results.multiHandLandmarks) {
-                // 모든 마디(21개)를 충돌 판정에 사용
+                // 손바닥 중심점 계산 (손목, 검지 시작점, 소지 시작점의 평균)
+                const palmCenterX = (landmarks[0].x + landmarks[5].x + landmarks[17].x) / 3 * canvasElement.width;
+                const palmCenterY = (landmarks[0].y + landmarks[5].y + landmarks[17].y) / 3 * canvasElement.height;
+                handPoints.push({x: palmCenterX, y: palmCenterY});
+
+                // 모든 마디 추가
                 landmarks.forEach(point => {
-                    const px = point.x * canvasElement.width;
-                    const py = point.y * canvasElement.height;
-                    handPoints.push({x: px, y: py});
+                    handPoints.push({x: point.x * canvasElement.width, y: point.y * canvasElement.height});
                 });
-                // 손가락 끝부분에 살짝 표시
-                [4, 8, 12, 16, 20].forEach(idx => {
-                    canvasCtx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-                    canvasCtx.beginPath();
-                    canvasCtx.arc(landmarks[idx].x * canvasElement.width, landmarks[idx].y * canvasElement.height, 15, 0, Math.PI * 2);
-                    canvasCtx.fill();
-                });
+
+                // 시각적 피드백 (손바닥 중심에 큰 원)
+                canvasCtx.fillStyle = 'rgba(0, 255, 255, 0.2)';
+                canvasCtx.beginPath();
+                canvasCtx.arc(palmCenterX, palmCenterY, 50, 0, Math.PI * 2);
+                canvasCtx.fill();
             }
         }
         updateGame();
     });
 
     function updateGame() {
-        if (!useCamera) canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-        emojis.forEach(e => { e.update(); e.draw(); });
-        particles = particles.filter(p => p.life > 0);
-        particles.forEach(p => { p.update(); p.draw(); });
-        if (!useCamera) requestAnimationFrame(updateGame);
+        if (gameStarted) {
+            emojis.forEach(e => { e.update(); e.draw(); });
+            particles = particles.filter(p => p.life > 0);
+            particles.forEach(p => { p.update(); p.draw(); });
+        }
     }
 
     const camera = new Camera(videoElement, {
         onFrame: async () => { await hands.send({image: videoElement}); },
         width: 1280, height: 720
     });
-
-    camera.start().then(() => {
-        useCamera = true;
-        videoElement.style.display = 'block';
-    }).catch(() => {
-        useCamera = false;
-        updateGame();
-    });
+    camera.start();
 </script>
 </body>
 </html>
