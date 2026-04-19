@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>하이브리드 감정 팡팡</title>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background: #f0f2f5; font-family: sans-serif; user-select: none; }
+        #ui { position: absolute; top: 20px; left: 20px; font-size: 24px; color: #333; z-index: 10; font-weight: bold; }
+        #mode-info { position: absolute; bottom: 20px; right: 20px; font-size: 14px; color: #666; z-index: 10; background: rgba(255,255,255,0.7); padding: 5px 10px; border-radius: 20px; }
+        #input_video { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; transform: rotateY(180deg); opacity: 0.3; } /* 카메라 배경은 흐릿하게 */
+        #gameCanvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; transform: rotateY(180deg); z-index: 5; }
+    </style>
+</head>
+<body>
+
+<div id="ui">점수: <span id="score">0</span></div>
+<div id="mode-info">모드 확인 중...</div>
+<video id="input_video" playsinline style="display:none;"></video>
+<canvas id="gameCanvas"></canvas>
+
+<script>
+    const videoElement = document.getElementById('input_video');
+    const canvasElement = document.getElementById('gameCanvas');
+    const canvasCtx = canvasElement.getContext('2d');
+    const scoreElement = document.getElementById('score');
+    const modeInfo = document.getElementById('mode-info');
+
+    let score = 0;
+    let emojis = [];
+    let particles = [];
+    let handX = -100, handY = -100, isHandPresent = false;
+    let useCamera = false;
+    const emotionList = ['😢', '😡', '😊', '😲', '😆', '😒', '😱', '🥳'];
+
+    function resize() {
+        canvasElement.width = window.innerWidth;
+        canvasElement.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    class Particle {
+        constructor(x, y) {
+            this.x = x; this.y = y;
+            this.size = Math.random() * 8 + 2;
+            this.speedX = Math.random() * 10 - 5;
+            this.speedY = Math.random() * 10 - 5;
+            this.life = 1.0;
+        }
+        update() { this.x += this.speedX; this.y += this.speedY; this.life -= 0.03; }
+        draw() {
+            canvasCtx.fillStyle = `rgba(255, 105, 180, ${this.life})`; // 분홍색 파티클
+            canvasCtx.beginPath();
+            canvasCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            canvasCtx.fill();
+        }
+    }
+
+    class Emotion {
+        constructor() { this.init(); }
+        init() {
+            this.x = Math.random() * canvasElement.width;
+            this.y = -50;
+            this.text = emotionList[Math.floor(Math.random() * emotionList.length)];
+            this.size = Math.random() * 20 + 50;
+            this.speed = Math.random() * 2 + 1.5;
+        }
+        update() {
+            this.y += this.speed;
+            if (this.y > canvasElement.height + 50) this.init();
+            
+            // 카메라 손 인식 또는 마우스 위치와 충돌 체크
+            const targetX = useCamera ? handX : (window.innerWidth - mouseX); // 캔버스 반전 고려
+            const targetY = mouseY;
+
+            const dist = Math.hypot(this.x - targetX, this.y - targetY);
+            if (dist < this.size * 0.7) this.pop();
+        }
+        pop() {
+            score += 10;
+            scoreElement.innerText = score;
+            for(let i=0; i<8; i++) particles.push(new Particle(this.x, this.y));
+            this.init();
+        }
+        draw() {
+            canvasCtx.font = `${this.size}px serif`;
+            canvasCtx.textAlign = 'center';
+            canvasCtx.fillText(this.text, this.x, this.y);
+        }
+    }
+
+    for (let i = 0; i < 12; i++) emojis.push(new Emotion());
+
+    // --- 마우스/터치 로직 ---
+    let mouseX = -1000, mouseY = -1000;
+    window.addEventListener('mousemove', (e) => { mouseX = e.clientX; mouseY = e.clientY; });
+    window.addEventListener('touchstart', (e) => { 
+        mouseX = e.touches[0].clientX; 
+        mouseY = e.touches[0].clientY; 
+    });
+
+    // --- 카메라 인식 설정 ---
+    const hands = new Hands({
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+    });
+
+    hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.5 });
+    hands.onResults((results) => {
+        canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+        if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+            const landmark = results.multiHandLandmarks[0][8];
+            handX = landmark.x * canvasElement.width;
+            handY = landmark.y * canvasElement.height;
+            isHandPresent = true;
+            canvasCtx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+            canvasCtx.beginPath();
+            canvasCtx.arc(handX, handY, 30, 0, Math.PI * 2);
+            canvasCtx.fill();
+        } else { isHandPresent = false; }
+        updateGame();
+    });
+
+    function updateGame() {
+        if (!useCamera) canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+        emojis.forEach(e => { e.update(); e.draw(); });
+        particles = particles.filter(p => p.life > 0);
+        particles.forEach(p => { p.update(); p.draw(); });
+        if (!useCamera) requestAnimationFrame(updateGame);
+    }
+
+    // 카메라 시작 시도
+    const camera = new Camera(videoElement, {
+        onFrame: async () => { await hands.send({image: videoElement}); },
+        width: 1280, height: 720
+    });
+
+    camera.start().then(() => {
+        useCamera = true;
+        videoElement.style.display = 'block';
+        modeInfo.innerText = "모드: 카메라 인식 (손을 흔들어보세요!)";
+    }).catch(() => {
+        useCamera = false;
+        modeInfo.innerText = "모드: 마우스/터치 (카메라 없음)";
+        updateGame(); // 마우스 모드로 루프 시작
+    });
+</script>
+</body>
+</html>
