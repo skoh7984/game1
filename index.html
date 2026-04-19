@@ -9,8 +9,9 @@
             font-family: 'Malgun Gothic', sans-serif; 
             display: flex; flex-direction: column; align-items: center; 
             background-color: #FFF9E1; padding: 10px; margin: 0;
-            touch-action: none; /* 전체 화면 스크롤 및 확대 방지 */
-            overflow: hidden;
+            /* touch-action: none 제거 -> 스크롤을 허용하기 위함 */
+            overflow-y: auto; 
+            color: #5A4A42;
         }
 
         .controls { 
@@ -36,7 +37,7 @@
             font-weight: bold; box-shadow: 0 4px 0 #E57373;
         }
 
-        .container { display: flex; flex-direction: column; gap: 15px; align-items: center; margin-top: 15px; }
+        .container { display: flex; flex-direction: column; gap: 15px; align-items: center; margin-top: 15px; padding-bottom: 50px; }
         
         .puzzle-board, .piece-bin {
             display: grid; border: 6px solid #FFD1D1; 
@@ -52,22 +53,23 @@
             cursor: grab; border: 1px solid rgba(255,255,255,0.8);
             box-sizing: border-box; user-select: none;
             background-repeat: no-repeat; border-radius: 8px;
-            touch-action: none; /* 조각 드래그 시 브라우저 간섭 차단 */
+            touch-action: none; /* 조각 위에서의 개별 액션만 제한 */
             position: relative;
         }
 
-        /* 드래그 중인 조각은 가장 위로 올라오게 설정 */
         .piece.dragging { 
             opacity: 0.9; 
             transform: scale(1.1); 
             z-index: 9999 !important; 
-            pointer-events: none; /* 드래그 중 아래에 있는 요소를 감지하기 위해 필요 */
+            pointer-events: none;
         }
 
         #preview { max-width: 80px; max-height: 80px; border: 3px solid #DCEDC8; display: none; margin: 5px auto; border-radius: 10px; }
         .label-text { font-weight: bold; color: #FF8B8B; background: #fff; padding: 3px 12px; border-radius: 20px; border: 2px solid #FFD1D1; font-size: 14px; }
 
         .confetti { position: fixed; width: 10px; height: 10px; z-index: 999; pointer-events: none; border-radius: 50%; }
+        
+        .scroll-tip { font-size: 12px; color: #999; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -86,6 +88,7 @@
 
         <button id="startBtn">시작! 🧩</button>
         <img id="preview" alt="미리보기">
+        <div class="scroll-tip">💡 화면 이동은 두 손가락으로 슥슥~</div>
     </div>
 
     <div class="container">
@@ -106,11 +109,8 @@
         let selectedImageUrl = "";
         let currentSize = 3; 
         let imgW = 0, imgH = 0;
-        
-        // 드래그 관련 전역 변수
         let activePiece = null;
-        let startX = 0;
-        let startY = 0;
+        let startX = 0, startY = 0;
 
         function setLevel(size, btn) {
             currentSize = size;
@@ -155,7 +155,6 @@
                 el.style.gridTemplateRows = `repeat(${size}, ${cellH}px)`;
             });
 
-            let pieces = [];
             for (let i = 0; i < size * size; i++) {
                 const bSlot = document.createElement('div');
                 bSlot.classList.add('slot');
@@ -175,21 +174,24 @@
                 piece.style.backgroundSize = `${displayW}px ${displayH}px`;
                 piece.style.backgroundPosition = `-${(i % size) * cellW}px -${Math.floor(i / size) * cellH}px`;
                 
-                // 터치 및 마우스 이벤트 등록
                 piece.addEventListener('mousedown', startDrag);
                 piece.addEventListener('touchstart', startDrag, {passive: false});
 
-                pieces.push(piece);
+                bin.querySelectorAll('.slot')[i].appendChild(piece); // 초기 임시 배치
             }
 
-            pieces.sort(() => Math.random() - 0.5);
+            // 셔플
+            const allPieces = Array.from(bin.querySelectorAll('.piece'));
+            allPieces.sort(() => Math.random() - 0.5);
             const binSlots = bin.querySelectorAll('.slot');
-            pieces.forEach((p, idx) => binSlots[idx].appendChild(p));
+            allPieces.forEach((p, idx) => binSlots[idx].appendChild(p));
         }
 
-        // 드래그 시작
         function startDrag(e) {
-            if (activePiece) return; // 이미 드래그 중이면 무시
+            // [중요] 두 손가락 이상 터치 시 드래그 무시 (스크롤 허용)
+            if (e.touches && e.touches.length > 1) return;
+            
+            if (activePiece) return;
             
             activePiece = this;
             activePiece.classList.add('dragging');
@@ -198,17 +200,22 @@
             startX = event.clientX;
             startY = event.clientY;
 
-            // 이벤트 윈도우 등록 (움직임과 끝은 윈도우 전체에서 감지해야 부드러움)
             window.addEventListener('mousemove', moveDrag);
             window.addEventListener('touchmove', moveDrag, {passive: false});
             window.addEventListener('mouseup', endDrag);
             window.addEventListener('touchend', endDrag);
         }
 
-        // 드래그 중
         function moveDrag(e) {
             if (!activePiece) return;
-            e.preventDefault(); // 화면 스크롤 방지
+
+            // [중요] 이동 중에도 손가락이 2개 이상이 되면 드래그 중단
+            if (e.touches && e.touches.length > 1) {
+                endDrag(e);
+                return;
+            }
+
+            e.preventDefault(); // 한 손가락일 때는 스크롤 방지
 
             const event = e.type.includes('touch') ? e.touches[0] : e;
             const dx = event.clientX - startX;
@@ -217,27 +224,22 @@
             activePiece.style.transform = `translate(${dx}px, ${dy}px) scale(1.1)`;
         }
 
-        // 드래그 끝
         function endDrag(e) {
             if (!activePiece) return;
 
-            const event = e.type.includes('touch') ? e.changedTouches[0] : e;
+            const event = (e.type === 'touchend') ? e.changedTouches[0] : e;
             
-            // 드래그 종료 시 위치 초기화 및 클래스 제거
             activePiece.classList.remove('dragging');
             activePiece.style.transform = '';
 
-            // 놓은 위치의 요소 찾기
             const dropTarget = document.elementFromPoint(event.clientX, event.clientY);
             const slot = dropTarget ? dropTarget.closest('.slot') : null;
 
-            // 슬롯이 있고 비어있을 때만 이동
             if (slot && slot.children.length === 0) {
                 slot.appendChild(activePiece);
                 checkWin();
             }
 
-            // 전역 이벤트 제거 및 상태 초기화
             window.removeEventListener('mousemove', moveDrag);
             window.removeEventListener('touchmove', moveDrag);
             window.removeEventListener('mouseup', endDrag);
@@ -255,7 +257,7 @@
         }
 
         function celebrate() {
-            for (let i = 0; i < 80; i++) {
+            for (let i = 0; i < 60; i++) {
                 const c = document.createElement('div');
                 c.classList.add('confetti');
                 c.style.left = Math.random() * 100 + 'vw';
@@ -263,7 +265,7 @@
                 document.body.appendChild(c);
                 c.animate([{transform:'translateY(0)',opacity:1},{transform:`translateY(100vh) rotate(360deg)`,opacity:0}], {duration: 2000, easing:'ease-out'}).onfinish=()=>c.remove();
             }
-            setTimeout(() => alert("우와! 정말 잘했어요! 퍼즐 완성! 🥳"), 300);
+            setTimeout(() => alert("우와! 다 맞췄어요! 🥳"), 300);
         }
     </script>
 </body>
