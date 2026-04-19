@@ -3,39 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>우리반 감정 팡팡! - 40초 챌린지</title>
+    <title>우리반 감정 팡팡! - 둥둥 모드</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <style>
         :root { --vh: 1vh; }
         body { margin: 0; overflow: hidden; background: #000; font-family: -apple-system, sans-serif; user-select: none; touch-action: none; width: 100vw; height: calc(var(--vh, 1vh) * 100); }
-        
-        #setup-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: white; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; box-sizing: border-box; }
+        #setup-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: white; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
         .speed-container { margin: 15px 0; display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
         .speed-btn { padding: 10px 18px; font-size: 15px; border: 2px solid #eee; background: #f9f9f9; border-radius: 12px; cursor: pointer; font-weight: 600; }
         .speed-btn.active { background: #ff4785; color: white; border-color: #ff4785; }
         .emoji-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; width: 100%; max-width: 320px; }
         .emoji-btn { font-size: 32px; border-radius: 12px; border: 3px solid #f0f0f0; background: white; aspect-ratio: 1/1; cursor: pointer; }
-        
-        /* 상단 UI (시간 및 점수) */
-        #top-ui { position: absolute; top: calc(env(safe-area-inset-top) + 20px); left: 50%; transform: translateX(-50%); z-index: 10; display: flex; gap: 15px; width: 90%; justify-content: center; display: none; }
-        .info-box { background: rgba(255, 255, 255, 0.9); padding: 8px 20px; border-radius: 20px; border: 2px solid #ff4785; font-weight: bold; font-size: 18px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-        
-        #bottom-ui { position: absolute; bottom: calc(env(safe-area-inset-bottom) + 20px); left: 50%; transform: translateX(-50%); z-index: 10; display: none; }
+        #top-ui { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 10; display: flex; gap: 15px; width: 90%; justify-content: center; display: none; }
+        .info-box { background: rgba(255, 255, 255, 0.9); padding: 8px 20px; border-radius: 20px; border: 2px solid #ff4785; font-weight: bold; font-size: 18px; }
+        #bottom-ui { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 10; display: none; }
         #target-guide { background: #fff; padding: 10px 25px; border-radius: 40px; border: 4px solid #ff4785; display: flex; align-items: center; gap: 10px; font-weight: bold; }
-        
+        #result-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(255,255,255,0.95); z-index: 200; display: none; flex-direction: column; align-items: center; justify-content: center; }
         #input_video { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; transform: rotateY(180deg); }
         #gameCanvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 5; }
-        
-        /* 종료 화면 */
-        #result-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(255,255,255,0.9); z-index: 200; display: none; flex-direction: column; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
 
 <div id="setup-screen">
-    <h2 style="margin:0 0 10px 0;">40초 감정 팡팡!</h2>
-    <p style="font-size: 13px; color: #888;">시간 안에 목표 기분을 많이 찾아보세요.</p>
+    <h2 style="margin-bottom:10px;">감정 팡팡! (둥둥 모드)</h2>
+    <p style="font-size: 13px; color: #888;">기분이 조금씩 움직여요! 집중해서 잡아보세요.</p>
     <div class="speed-container">
         <button class="speed-btn active" onclick="setSpeed(10)">10</button>
         <button class="speed-btn" onclick="setSpeed(20)">20</button>
@@ -52,14 +45,11 @@
 </div>
 
 <div id="bottom-ui">
-    <div id="target-guide">
-        <span id="target-emoji" style="font-size: 35px;"></span>
-        <span>를 찾으세요!</span>
-    </div>
+    <div id="target-guide"><span id="target-emoji" style="font-size: 35px;"></span><span>를 찾으세요!</span></div>
 </div>
 
 <div id="result-screen">
-    <h1 style="font-size: 40px; color: #ff4785; margin: 0;">종료!</h1>
+    <h1 style="font-size: 40px; color: #ff4785;">시간 종료!</h1>
     <p style="font-size: 24px; font-weight: bold; margin: 20px 0;">최종 점수: <span id="final-score">0</span>점</p>
     <button onclick="location.reload()" style="padding: 15px 30px; font-size: 18px; border-radius: 15px; border: none; background: #ff4785; color: white; font-weight: bold;">다시 하기</button>
 </div>
@@ -79,14 +69,7 @@
     const bottomUI = document.getElementById('bottom-ui');
     const targetEmojiDisplay = document.getElementById('target-emoji');
 
-    let score = 0;
-    let timeLeft = 40;
-    let emojis = [];
-    let particles = [];
-    let pinchPoints = []; 
-    let gameStarted = false;
-    let targetEmoji = '';
-    let gameSpeed = 10;
+    let score = 0, timeLeft = 40, emojis = [], particles = [], pinchPoints = [], gameStarted = false, targetEmoji = '', gameSpeed = 10;
     const emotionList = ['😊', '😆', '🥳', '😢', '😡', '😲', '😒', '😱'];
 
     window.setSpeed = (val) => {
@@ -96,14 +79,10 @@
 
     emotionList.forEach(emoji => {
         const btn = document.createElement('button');
-        btn.className = 'emoji-btn';
-        btn.innerText = emoji;
+        btn.className = 'emoji-btn'; btn.innerText = emoji;
         btn.onclick = () => {
-            targetEmoji = emoji;
-            targetEmojiDisplay.innerText = emoji;
-            setupScreen.style.display = 'none';
-            topUI.style.display = 'flex';
-            bottomUI.style.display = 'flex';
+            targetEmoji = emoji; targetEmojiDisplay.innerText = emoji;
+            setupScreen.style.display = 'none'; topUI.style.display = 'flex'; bottomUI.style.display = 'flex';
             startGame();
         };
         document.getElementById('emoji-grid').appendChild(btn);
@@ -112,23 +91,16 @@
     function startGame() {
         gameStarted = true;
         for(let i=0; i<4; i++) emojis.push(new RandomEmotion());
-        
         const countdown = setInterval(() => {
-            timeLeft--;
-            timerElement.innerText = timeLeft;
-            if (timeLeft <= 0) {
-                clearInterval(countdown);
-                endGame();
-            }
+            timeLeft--; timerElement.innerText = timeLeft;
+            if (timeLeft <= 0) { clearInterval(countdown); endGame(); }
         }, 1000);
     }
 
     function endGame() {
         gameStarted = false;
         document.getElementById('final-score').innerText = score;
-        resultScreen.style.display = 'flex';
-        topUI.style.display = 'none';
-        bottomUI.style.display = 'none';
+        resultScreen.style.display = 'flex'; topUI.style.display = 'none'; bottomUI.style.display = 'none';
     }
 
     class RandomEmotion {
@@ -137,29 +109,38 @@
             this.init(); 
         }
         init() {
-            const margin = this.size + 40;
-            this.x = Math.random() * (canvasElement.width - margin * 2) + margin;
-            this.y = Math.random() * (canvasElement.height - margin * 4) + margin + 60;
+            const margin = this.size + 50;
+            this.baseX = Math.random() * (canvasElement.width - margin * 2) + margin;
+            this.baseY = Math.random() * (canvasElement.height - margin * 4) + margin + 60;
+            this.x = this.baseX;
+            this.y = this.baseY;
             
-            // 확률 로직: targetEmoji가 나올 확률을 3배 높임
+            // 움직임을 위한 오프셋 및 속도
+            this.offsetX = 0; this.offsetY = 0;
+            this.angle = Math.random() * Math.PI * 2;
+            this.floatSpeed = Math.random() * 0.05 + 0.02;
+
             const pool = [...emotionList, targetEmoji, targetEmoji]; 
             this.text = pool[Math.floor(Math.random() * pool.length)];
-            
-            this.isPopping = false;
-            this.popLife = 1.0;
-            this.timer = 0;
+            this.isPopping = false; this.popLife = 1.0; this.timer = 0;
             this.maxTime = (60 / (gameSpeed / 10)) * 2.2; 
         }
         update() {
-            if (!gameStarted || this.isPopping) {
-                if(this.isPopping) {
-                    this.popLife -= 0.08;
-                    if (this.popLife <= 0) this.init();
-                }
+            if (!gameStarted) return;
+            if (this.isPopping) {
+                this.popLife -= 0.08;
+                if (this.popLife <= 0) this.init();
                 return;
             }
             this.timer++;
             if (this.timer > this.maxTime) this.init();
+
+            // 부드러운 둥둥 움직임 계산
+            this.angle += this.floatSpeed;
+            this.offsetX = Math.sin(this.angle) * 15; // 좌우 15px 범위
+            this.offsetY = Math.cos(this.angle * 0.8) * 15; // 상하 15px 범위
+            this.x = this.baseX + this.offsetX;
+            this.y = this.baseY + this.offsetY;
 
             for (let p of pinchPoints) {
                 if (Math.hypot(this.x - p.x, this.y - p.y) < this.size * 1.3) {
@@ -177,8 +158,7 @@
             let drawX = canvasElement.width - this.x;
             canvasCtx.translate(drawX, this.y);
             canvasCtx.font = `${this.size}px "Apple Color Emoji", serif`;
-            canvasCtx.textAlign = 'center';
-            canvasCtx.textBaseline = 'middle'; 
+            canvasCtx.textAlign = 'center'; canvasCtx.textBaseline = 'middle'; 
             canvasCtx.fillText(this.text, 0, 0);
             canvasCtx.restore();
         }
@@ -190,12 +170,9 @@
     hands.onResults((results) => {
         canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
         pinchPoints = [];
-
         if (results.multiHandLandmarks) {
             results.multiHandLandmarks.forEach((landmarks) => {
-                canvasCtx.strokeStyle = '#39FF14'; 
-                canvasCtx.lineWidth = 4;
-                
+                canvasCtx.strokeStyle = '#39FF14'; canvasCtx.lineWidth = 4;
                 const fingerJoints = [[0,1,2,3,4], [0,5,6,7,8], [5,9,10,11,12], [9,13,14,15,16], [13,17,18,19,20], [0,17]];
                 fingerJoints.forEach(joint => {
                     canvasCtx.beginPath();
@@ -206,23 +183,16 @@
                     });
                     canvasCtx.stroke();
                 });
-
-                const thumb = landmarks[4];
-                const index = landmarks[8];
-                const distance = Math.hypot(thumb.x - index.x, thumb.y - index.y);
-
-                if (distance < 0.06) {
+                const thumb = landmarks[4], index = landmarks[8];
+                if (Math.hypot(thumb.x - index.x, thumb.y - index.y) < 0.06) {
                     const px = ((thumb.x + index.x) / 2) * canvasElement.width;
                     const py = ((thumb.y + index.y) / 2) * canvasElement.height;
                     pinchPoints.push({x: px, y: py});
-                    canvasCtx.fillStyle = '#FFFF00';
-                    canvasCtx.beginPath();
-                    canvasCtx.arc((1-thumb.x)*canvasElement.width, thumb.y*canvasElement.height, 10, 0, Math.PI*2);
-                    canvasCtx.fill();
+                    canvasCtx.fillStyle = '#FFFF00'; canvasCtx.beginPath();
+                    canvasCtx.arc((1-thumb.x)*canvasElement.width, thumb.y*canvasElement.height, 10, 0, Math.PI*2); canvasCtx.fill();
                 }
             });
         }
-
         if (gameStarted || timeLeft <= 0) {
             emojis.forEach(e => { e.update(); e.draw(); });
             particles.forEach(p => {
@@ -239,7 +209,6 @@
         width: 1280, height: 720
     });
     camera.start().then(() => {
-        videoElement.style.display = 'block';
         canvasElement.width = window.innerWidth;
         canvasElement.height = window.innerHeight;
     });
