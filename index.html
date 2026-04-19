@@ -9,18 +9,19 @@
             font-family: 'Malgun Gothic', sans-serif; 
             display: flex; flex-direction: column; align-items: center; 
             background-color: #FFF9E1; padding: 10px; margin: 0;
-            touch-action: manipulation; /* 브라우저 기본 확대 방지 */
+            touch-action: none; /* 전체 화면 스크롤 및 확대 방지 */
+            overflow: hidden;
         }
 
         .controls { 
             margin-top: 10px; padding: 15px; background: #fff; 
             border-radius: 25px; box-shadow: 0 6px 0 #FFD966; 
-            text-align: center; border: 3px solid #FFD966; width: 90%; max-width: 500px;
+            text-align: center; border: 3px solid #FFD966; width: 90%; max-width: 450px;
         }
         
-        h2 { color: #FF6B6B; font-size: 22px; margin: 5px 0; }
+        h2 { color: #FF6B6B; font-size: 20px; margin: 5px 0; }
 
-        .btn-group { margin: 10px 0; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+        .btn-group { margin: 10px 0; display: flex; gap: 8px; justify-content: center; }
         
         .level-btn { 
             padding: 8px 15px; font-size: 14px; cursor: pointer; 
@@ -30,16 +31,16 @@
         .level-btn.active { background: #A8E6CF; color: #fff; }
         
         #startBtn { 
-            padding: 12px 25px; font-size: 18px; background-color: #FF8B8B; 
+            padding: 10px 25px; font-size: 18px; background-color: #FF8B8B; 
             color: white; border: none; border-radius: 50px; cursor: pointer; 
             font-weight: bold; box-shadow: 0 4px 0 #E57373;
         }
 
-        .container { display: flex; flex-direction: column; gap: 20px; align-items: center; margin-top: 20px; }
+        .container { display: flex; flex-direction: column; gap: 15px; align-items: center; margin-top: 15px; }
         
         .puzzle-board, .piece-bin {
             display: grid; border: 6px solid #FFD1D1; 
-            background-color: #ffffff; border-radius: 15px; position: relative;
+            background-color: #ffffff; border-radius: 15px;
         }
 
         .slot {
@@ -51,15 +52,20 @@
             cursor: grab; border: 1px solid rgba(255,255,255,0.8);
             box-sizing: border-box; user-select: none;
             background-repeat: no-repeat; border-radius: 8px;
-            touch-action: none; /* 터치 시 스크롤 방지 */
-            position: relative; z-index: 10;
+            touch-action: none; /* 조각 드래그 시 브라우저 간섭 차단 */
+            position: relative;
         }
 
-        /* 드래그 중인 조각 스타일 */
-        .piece.dragging { opacity: 0.8; transform: scale(1.1); z-index: 100; cursor: grabbing; }
+        /* 드래그 중인 조각은 가장 위로 올라오게 설정 */
+        .piece.dragging { 
+            opacity: 0.9; 
+            transform: scale(1.1); 
+            z-index: 9999 !important; 
+            pointer-events: none; /* 드래그 중 아래에 있는 요소를 감지하기 위해 필요 */
+        }
 
-        #preview { max-width: 100px; max-height: 100px; border: 3px solid #DCEDC8; display: none; margin: 10px auto; border-radius: 15px; }
-        .label-text { font-weight: bold; color: #FF8B8B; background: #fff; padding: 5px 15px; border-radius: 20px; border: 2px solid #FFD1D1; margin-bottom: 5px; }
+        #preview { max-width: 80px; max-height: 80px; border: 3px solid #DCEDC8; display: none; margin: 5px auto; border-radius: 10px; }
+        .label-text { font-weight: bold; color: #FF8B8B; background: #fff; padding: 3px 12px; border-radius: 20px; border: 2px solid #FFD1D1; font-size: 14px; }
 
         .confetti { position: fixed; width: 10px; height: 10px; z-index: 999; pointer-events: none; border-radius: 50%; }
     </style>
@@ -69,183 +75,11 @@
     <h2>🌈 터치터치 퍼즐 놀이 🌈</h2>
     
     <div class="controls">
-        <label for="imageInput" style="display: inline-block; padding: 8px 20px; background: #FFD966; color: #5A4A42; border-radius: 50px; cursor: pointer; font-weight: bold;">📷 사진 고르기</label>
+        <label for="imageInput" style="display: inline-block; padding: 8px 20px; background: #FFD966; color: #5A4A42; border-radius: 50px; cursor: pointer; font-weight: bold; font-size: 14px;">📷 사진 고르기</label>
         <input type="file" id="imageInput" accept="image/*" style="display: none;">
 
         <div class="btn-group">
             <button class="level-btn" onclick="setLevel(2, this)">🐣 2x2</button>
             <button class="level-btn active" onclick="setLevel(3, this)">🐥 3x3</button>
+            <button class="level-btn" onclick="setLevel(4, this)">🌳 4x4</button>
         </div>
-
-        <button id="startBtn">시작! 🧩</button>
-        <img id="preview" alt="미리보기">
-    </div>
-
-    <div class="container">
-        <span class="label-text">🏠 완성하는 곳</span>
-        <div id="board" class="puzzle-board"></div>
-        
-        <span class="label-text">🎁 퍼즐 조각들</span>
-        <div id="bin" class="piece-bin"></div>
-    </div>
-
-    <script>
-        const imageInput = document.getElementById('imageInput');
-        const startBtn = document.getElementById('startBtn');
-        const preview = document.getElementById('preview');
-        const board = document.getElementById('board');
-        const bin = document.getElementById('bin');
-        
-        let selectedImageUrl = "";
-        let currentSize = 3; 
-        let imgW = 0, imgH = 0;
-        let activePiece = null;
-
-        function setLevel(size, btn) {
-            currentSize = size;
-            document.querySelectorAll('.level-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            board.innerHTML = ''; bin.innerHTML = '';
-        }
-
-        imageInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                selectedImageUrl = event.target.result;
-                preview.src = selectedImageUrl;
-                preview.style.display = 'block';
-                const tempImg = new Image();
-                tempImg.onload = function() { imgW = tempImg.width; imgH = tempImg.height; };
-                tempImg.src = selectedImageUrl;
-            };
-            reader.readAsDataURL(file);
-        });
-
-        startBtn.addEventListener('click', function() {
-            if (!selectedImageUrl) { alert("사진을 선택해 주세요! 😊"); return; }
-            createPuzzle(selectedImageUrl, currentSize);
-        });
-
-        function createPuzzle(imgUrl, size) {
-            board.innerHTML = ''; bin.innerHTML = '';
-            // 모바일 화면 폭에 맞춤 (최대 350px)
-            const maxBase = Math.min(window.innerWidth - 40, 350);
-            let displayW, displayH;
-            if (imgW >= imgH) { displayW = maxBase; displayH = (imgH / imgW) * maxBase; }
-            else { displayH = maxBase; displayW = (imgW / imgH) * maxBase; }
-
-            const cellW = displayW / size;
-            const cellH = displayH / size;
-            
-            [board, bin].forEach(el => {
-                el.style.width = displayW + 'px'; el.style.height = displayH + 'px';
-                el.style.gridTemplateColumns = `repeat(${size}, ${cellW}px)`;
-                el.style.gridTemplateRows = `repeat(${size}, ${cellH}px)`;
-            });
-
-            let pieces = [];
-            for (let i = 0; i < size * size; i++) {
-                const bSlot = createSlot(i);
-                board.appendChild(bSlot);
-                bin.appendChild(createSlot(-1));
-
-                const piece = document.createElement('div');
-                piece.classList.add('piece');
-                piece.id = 'piece' + i;
-                piece.dataset.index = i;
-                piece.style.width = cellW + 'px';
-                piece.style.height = cellH + 'px';
-                piece.style.backgroundImage = `url(${imgUrl})`;
-                piece.style.backgroundSize = `${displayW}px ${displayH}px`;
-                piece.style.backgroundPosition = `-${(i % size) * cellW}px -${Math.floor(i / size) * cellH}px`;
-                
-                // 이벤트 연결 (마우스 + 터치)
-                addDragEvents(piece);
-                pieces.push(piece);
-            }
-
-            pieces.sort(() => Math.random() - 0.5);
-            const binSlots = bin.querySelectorAll('.slot');
-            pieces.forEach((p, idx) => binSlots[idx].appendChild(p));
-        }
-
-        function createSlot(idx) {
-            const slot = document.createElement('div');
-            slot.classList.add('slot');
-            if(idx !== -1) slot.dataset.correctIndex = idx;
-            return slot;
-        }
-
-        // 터치/마우스 통합 드래그 로직
-        function addDragEvents(el) {
-            const onStart = (e) => {
-                activePiece = el;
-                el.classList.add('dragging');
-                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-                el.dataset.startX = clientX;
-                el.dataset.startY = clientY;
-            };
-
-            const onMove = (e) => {
-                if (!activePiece) return;
-                e.preventDefault(); // 스크롤 방지
-                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-                const dx = clientX - el.dataset.startX;
-                const dy = clientY - el.dataset.startY;
-                el.style.transform = `translate(${dx}px, ${dy}px) scale(1.1)`;
-            };
-
-            const onEnd = (e) => {
-                if (!activePiece) return;
-                el.classList.remove('dragging');
-                el.style.transform = '';
-                
-                const clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
-                const clientY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
-                
-                activePiece = null;
-                
-                // 어느 슬롯 위에 놓았는지 확인
-                const targetSlot = document.elementFromPoint(clientX, clientY)?.closest('.slot');
-                if (targetSlot && targetSlot.children.length === 0) {
-                    targetSlot.appendChild(el);
-                    checkWin();
-                }
-            };
-
-            el.addEventListener('mousedown', onStart);
-            window.addEventListener('mousemove', onMove);
-            window.addEventListener('mouseup', onEnd);
-
-            el.addEventListener('touchstart', onStart, {passive: false});
-            window.addEventListener('touchmove', onMove, {passive: false});
-            window.addEventListener('touchend', onEnd);
-        }
-
-        function checkWin() {
-            const slots = board.querySelectorAll('.slot');
-            let match = 0;
-            slots.forEach(s => {
-                if(s.children[0]?.dataset.index == s.dataset.correctIndex) match++;
-            });
-            if(match == currentSize * currentSize) celebrate();
-        }
-
-        function celebrate() {
-            for (let i = 0; i < 80; i++) {
-                const c = document.createElement('div');
-                c.classList.add('confetti');
-                c.style.left = Math.random() * 100 + 'vw';
-                c.style.backgroundColor = `hsl(${Math.random() * 360}, 80%, 60%)`;
-                document.body.appendChild(c);
-                c.animate([{transform:'translateY(0)',opacity:1},{transform:`translateY(100vh) rotate(360deg)`,opacity:0}], {duration: 2000, easing:'ease-out'}).onfinish=()=>c.remove();
-            }
-            setTimeout(() => alert("우와! 다 맞췄어요! 참 잘했어요! 🥳"), 300);
-        }
-    </script>
-</body>
-</html>
