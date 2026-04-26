@@ -5,134 +5,48 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>말랑말랑 정답 자석 퍼즐</title>
     <style>
-        body { 
-            font-family: 'Malgun Gothic', sans-serif; 
-            display: flex; flex-direction: column; align-items: center; 
-            background-color: #FFF9E1; padding: 10px; margin: 0;
-            overflow-y: auto; color: #5A4A42;
-        }
-
-        .controls { 
-            margin-top: 10px; padding: 15px; background: #fff; 
-            border-radius: 25px; box-shadow: 0 6px 0 #FFD966; 
-            text-align: center; border: 3px solid #FFD966; width: 90%; max-width: 600px;
-        }
-        
+        body { font-family: 'Malgun Gothic', sans-serif; display: flex; flex-direction: column; align-items: center; background-color: #FFF9E1; padding: 10px; margin: 0; overflow-y: auto; color: #5A4A42; }
+        .controls { margin-top: 10px; padding: 15px; background: #fff; border-radius: 25px; box-shadow: 0 6px 0 #FFD966; text-align: center; border: 3px solid #FFD966; width: 90%; max-width: 600px; }
         h2 { color: #FF6B6B; font-size: 20px; margin: 5px 0; }
         .btn-group { margin: 10px 0; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
-        
-        .level-btn { 
-            padding: 8px 12px; font-size: 13px; cursor: pointer; 
-            border: 2px solid #A8E6CF; background: #fff; color: #4DB6AC; 
-            border-radius: 50px; font-weight: bold;
-        }
+        .level-btn { padding: 8px 12px; font-size: 13px; cursor: pointer; border: 2px solid #A8E6CF; background: #fff; color: #4DB6AC; border-radius: 50px; font-weight: bold; }
         .level-btn.active { background: #A8E6CF; color: #fff; }
-        
-        #startBtn { 
-            padding: 10px 25px; font-size: 18px; background-color: #FF8B8B; 
-            color: white; border: none; border-radius: 50px; cursor: pointer; 
-            font-weight: bold; box-shadow: 0 4px 0 #E57373;
-        }
-
-        /* 📍 미리보기 원본 사진 스타일: 아래 완성판과 크기를 맞춤 */
-        #previewContainer {
-            margin-top: 15px;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-        }
-        #preview { 
-            border: 8px solid #DCEDC8; 
-            border-radius: 20px; 
-            object-fit: contain;
-            background-color: #fff;
-        }
-        .preview-label {
-            font-weight: bold; color: #8BC34A; margin-bottom: 5px; font-size: 14px;
-        }
-
-        .container { 
-            display: flex; flex-direction: column; gap: 20px; 
-            align-items: center; margin-top: 20px; padding-bottom: 80px;
-        }
-
-        @media (min-width: 800px) {
-            .container { flex-direction: row-reverse; justify-content: center; align-items: flex-start; gap: 40px; }
-        }
-        
-        .puzzle-board {
-            display: grid; border: 8px solid #FFD1D1; 
-            background-color: #ffffff; border-radius: 20px;
-            padding: 5px; gap: 0; 
-        }
-
-        .piece-bin {
-            display: grid; border: 8px solid #A8E6CF; 
-            background-color: rgba(255, 255, 255, 0.4); border-radius: 20px;
-            padding: 5px; gap: 5px;
-        }
-
-        .slot {
-            box-sizing: border-box;
-            display: flex; align-items: center; justify-content: center;
-        }
-
+        #startBtn { padding: 10px 25px; font-size: 18px; background-color: #FF8B8B; color: white; border: none; border-radius: 50px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 0 #E57373; }
+        #previewContainer { margin-top: 15px; display: none; flex-direction: column; align-items: center; }
+        #preview { border: 8px solid #DCEDC8; border-radius: 20px; object-fit: contain; background-color: #fff; }
+        .preview-label { font-weight: bold; color: #8BC34A; margin-bottom: 5px; font-size: 14px; }
+        .container { display: flex; flex-direction: column; gap: 20px; align-items: center; margin-top: 20px; padding-bottom: 80px; }
+        @media (min-width: 800px) { .container { flex-direction: row-reverse; justify-content: center; align-items: flex-start; gap: 40px; } }
+        .puzzle-board { display: grid; border: 8px solid #FFD1D1; background-color: #ffffff; border-radius: 20px; padding: 5px; gap: 0; }
+        .piece-bin { display: grid; border: 8px solid #A8E6CF; background-color: rgba(255, 255, 255, 0.4); border-radius: 20px; padding: 5px; gap: 5px; }
+        .slot { box-sizing: border-box; display: flex; align-items: center; justify-content: center; }
         .puzzle-board .slot { border: 1px dashed #FFECF2; }
-
-        .piece {
-            cursor: grab; border: none;
-            box-sizing: border-box; user-select: none;
-            background-repeat: no-repeat; border-radius: 12px;
-            touch-action: none; position: relative;
-            z-index: 10;
-        }
-
-        .piece.dragging { 
-            opacity: 0.9; transform: scale(1.1); 
-            z-index: 9999 !important; pointer-events: none; 
-            border: 2px solid #fff; 
-            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
-            border-radius: 12px !important;
-        }
-
-        .piece.is-correct { 
-            border: none !important; 
-            box-shadow: none !important; 
-            border-radius: 0 !important; 
-            width: 100% !important; height: 100% !important;
-            transform: translate(0,0) !important;
-        }
-
+        .piece { cursor: grab; border: none; box-sizing: border-box; user-select: none; background-repeat: no-repeat; border-radius: 12px; touch-action: none; position: relative; z-index: 10; transition: border-radius 0.2s; }
+        .piece.dragging { opacity: 0.9; transform: scale(1.1); z-index: 9999 !important; pointer-events: none; border: 2px solid #fff; box-shadow: 0 8px 20px rgba(0,0,0,0.3); border-radius: 12px !important; }
+        .piece.is-correct { border: none !important; box-shadow: none !important; border-radius: 0 !important; width: 100% !important; height: 100% !important; transform: translate(0,0) !important; }
         .label-text { font-weight: bold; color: #FF8B8B; background: #fff; padding: 5px 15px; border-radius: 20px; border: 3px solid #FFD1D1; font-size: 15px; margin-bottom: 10px; display: inline-block; }
         .label-bin { color: #4DB6AC; border: 3px solid #A8E6CF; }
-
         .game-column { text-align: center; }
         .confetti { position: fixed; width: 12px; height: 12px; z-index: 999; pointer-events: none; border-radius: 50%; }
     </style>
 </head>
 <body>
-
     <h2>🌈 착! 달라붙는 사진 퍼즐 🌈</h2>
-    
     <div class="controls">
         <label for="imageInput" style="display: inline-block; padding: 8px 20px; background: #FFD966; color: #5A4A42; border-radius: 50px; cursor: pointer; font-weight: bold; font-size: 14px;">📷 사진 고르기</label>
         <input type="file" id="imageInput" accept="image/*" style="display: none;">
-
         <div class="btn-group">
             <button class="level-btn" onclick="setLevel(2, this)">🐣 2x2</button>
             <button class="level-btn active" onclick="setLevel(3, this)">🐥 3x3</button>
             <button class="level-btn" onclick="setLevel(4, this)">🌳 4x4</button>
             <button class="level-btn" onclick="setLevel(5, this)">💎 5x5</button>
         </div>
-
         <button id="startBtn">시작! 🧩</button>
-
         <div id="previewContainer">
             <span class="preview-label">👀 완성될 모습이에요</span>
             <img id="preview" alt="미리보기">
         </div>
     </div>
-
     <div class="container">
         <div class="game-column">
             <span class="label-text">🏠 완성하는 곳</span>
@@ -172,25 +86,18 @@
             reader.onload = function(event) {
                 selectedImageUrl = event.target.result;
                 const tempImg = new Image();
-                tempImg.onload = function() { 
-                    imgW = tempImg.width; 
-                    imgH = tempImg.height; 
-                    updatePreviewSize(); // 사진 로드 후 크기 계산
-                };
+                tempImg.onload = function() { imgW = tempImg.width; imgH = tempImg.height; updatePreviewSize(); };
                 tempImg.src = selectedImageUrl;
             };
             reader.readAsDataURL(file);
         });
 
-        // 📍 미리보기 크기를 완성판과 똑같이 설정하는 함수
         function updatePreviewSize() {
             const isWide = window.innerWidth >= 800;
             const maxBase = isWide ? Math.min(window.innerWidth / 2 - 100, 420) : Math.min(window.innerWidth - 40, 360);
-            
             let displayW, displayH;
             if (imgW >= imgH) { displayW = maxBase; displayH = (imgH / imgW) * maxBase; }
             else { displayH = maxBase; displayW = (imgW / imgH) * maxBase; }
-
             preview.style.width = displayW + 'px';
             preview.style.height = displayH + 'px';
             preview.src = selectedImageUrl;
@@ -206,47 +113,33 @@
             board.innerHTML = ''; bin.innerHTML = '';
             const isWide = window.innerWidth >= 800;
             const maxBase = isWide ? Math.min(window.innerWidth / 2 - 100, 420) : Math.min(window.innerWidth - 40, 360);
-            
             let displayW, displayH;
             if (imgW >= imgH) { displayW = maxBase; displayH = (imgH / imgW) * maxBase; }
             else { displayH = maxBase; displayW = (imgW / imgH) * maxBase; }
-
             const cellW = displayW / size;
             const cellH = displayH / size;
-            
             board.style.width = displayW + 'px'; board.style.height = displayH + 'px';
             board.style.gridTemplateColumns = `repeat(${size}, ${cellW}px)`;
             board.style.gridTemplateRows = `repeat(${size}, ${cellH}px)`;
-
             bin.style.width = displayW + 'px'; bin.style.height = displayH + 'px';
             bin.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
             bin.style.gridTemplateRows = `repeat(${size}, 1fr)`;
-
             for (let i = 0; i < size * size; i++) {
                 const bSlot = document.createElement('div');
-                bSlot.classList.add('slot');
-                bSlot.dataset.correctIndex = i;
+                bSlot.classList.add('slot'); bSlot.dataset.correctIndex = i;
                 board.appendChild(bSlot);
-
                 const pSlot = document.createElement('div');
-                pSlot.classList.add('slot');
-                bin.appendChild(pSlot);
-
+                pSlot.classList.add('slot'); bin.appendChild(pSlot);
                 const piece = document.createElement('div');
-                piece.classList.add('piece');
-                piece.dataset.index = i;
-                piece.style.width = cellW + 'px';
-                piece.style.height = cellH + 'px';
+                piece.classList.add('piece'); piece.dataset.index = i;
+                piece.style.width = cellW + 'px'; piece.style.height = cellH + 'px';
                 piece.style.backgroundImage = `url(${imgUrl})`;
                 piece.style.backgroundSize = `${displayW}px ${displayH}px`;
                 piece.style.backgroundPosition = `-${(i % size) * cellW}px -${Math.floor(i / size) * cellH}px`;
-                
                 piece.addEventListener('mousedown', startDrag);
                 piece.addEventListener('touchstart', startDrag, {passive: false});
-
                 bin.querySelectorAll('.slot')[i].appendChild(piece);
             }
-
             const allPieces = Array.from(bin.querySelectorAll('.piece'));
             allPieces.sort(() => Math.random() - 0.5);
             const binSlots = bin.querySelectorAll('.slot');
@@ -256,15 +149,11 @@
         function startDrag(e) {
             if (e.touches && e.touches.length > 1) return;
             if (activePiece) return;
-            
             activePiece = this;
             activePiece.classList.remove('is-correct');
             activePiece.classList.add('dragging');
-            
             const event = e.type.includes('touch') ? e.touches[0] : e;
-            startX = event.clientX;
-            startY = event.clientY;
-
+            startX = event.clientX; startY = event.clientY;
             window.addEventListener('mousemove', moveDrag);
             window.addEventListener('touchmove', moveDrag, {passive: false});
             window.addEventListener('mouseup', endDrag);
@@ -284,17 +173,18 @@
             if (!activePiece) return;
             const event = (e.type === 'touchend') ? e.changedTouches[0] : e;
             activePiece.classList.remove('dragging');
-            
             const boardSlots = Array.from(board.querySelectorAll('.slot'));
             let targetSlot = null;
-            let minDistance = 50;
+            
+            // 📍 자석 효과: 조각 너비의 80% 거리까지 정답으로 인정
+            const cellW = parseFloat(activePiece.style.width);
+            const minDistance = cellW * 0.8; 
 
             boardSlots.forEach(slot => {
                 const rect = slot.getBoundingClientRect();
                 const slotCenterX = rect.left + rect.width / 2;
                 const slotCenterY = rect.top + rect.height / 2;
                 const dist = Math.sqrt(Math.pow(event.clientX - slotCenterX, 2) + Math.pow(event.clientY - slotCenterY, 2));
-
                 if (dist < minDistance && slot.dataset.correctIndex == activePiece.dataset.index) {
                     targetSlot = slot;
                 }
@@ -308,7 +198,6 @@
             } else {
                 activePiece.style.transform = 'translate(0, 0)';
             }
-
             window.removeEventListener('mousemove', moveDrag);
             window.removeEventListener('touchmove', moveDrag);
             window.removeEventListener('mouseup', endDrag);
