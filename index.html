@@ -34,6 +34,23 @@
             font-weight: bold; box-shadow: 0 4px 0 #E57373;
         }
 
+        /* 📍 미리보기 원본 사진 스타일: 아래 완성판과 크기를 맞춤 */
+        #previewContainer {
+            margin-top: 15px;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+        }
+        #preview { 
+            border: 8px solid #DCEDC8; 
+            border-radius: 20px; 
+            object-fit: contain;
+            background-color: #fff;
+        }
+        .preview-label {
+            font-weight: bold; color: #8BC34A; margin-bottom: 5px; font-size: 14px;
+        }
+
         .container { 
             display: flex; flex-direction: column; gap: 20px; 
             align-items: center; margin-top: 20px; padding-bottom: 80px;
@@ -58,7 +75,6 @@
         .slot {
             box-sizing: border-box;
             display: flex; align-items: center; justify-content: center;
-            /* 📍 여기서 overflow: hidden을 제거하여 드래그 중인 조각이 보이게 함 */
         }
 
         .puzzle-board .slot { border: 1px dashed #FFECF2; }
@@ -69,26 +85,17 @@
             background-repeat: no-repeat; border-radius: 12px;
             touch-action: none; position: relative;
             z-index: 10;
-            transition: border-radius 0.2s;
         }
 
-        /* 📍 드래그 시 효과 강화 */
         .piece.dragging { 
             opacity: 0.9; transform: scale(1.1); 
             z-index: 9999 !important; pointer-events: none; 
             border: 2px solid #fff; 
             box-shadow: 0 8px 20px rgba(0,0,0,0.3);
-            border-radius: 12px !important; /* 드래그 할 때는 다시 둥글게 */
+            border-radius: 12px !important;
         }
 
-        .piece.returning {
-            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            z-index: 999;
-        }
-
-        /* 📍 정답 자리에 딱 붙었을 때 효과 */
         .piece.is-correct { 
-            animation: none;
             border: none !important; 
             box-shadow: none !important; 
             border-radius: 0 !important; 
@@ -96,7 +103,6 @@
             transform: translate(0,0) !important;
         }
 
-        #preview { max-width: 80px; max-height: 80px; border: 3px solid #DCEDC8; display: none; margin: 5px auto; border-radius: 10px; }
         .label-text { font-weight: bold; color: #FF8B8B; background: #fff; padding: 5px 15px; border-radius: 20px; border: 3px solid #FFD1D1; font-size: 15px; margin-bottom: 10px; display: inline-block; }
         .label-bin { color: #4DB6AC; border: 3px solid #A8E6CF; }
 
@@ -120,7 +126,11 @@
         </div>
 
         <button id="startBtn">시작! 🧩</button>
-        <img id="preview" alt="미리보기">
+
+        <div id="previewContainer">
+            <span class="preview-label">👀 완성될 모습이에요</span>
+            <img id="preview" alt="미리보기">
+        </div>
     </div>
 
     <div class="container">
@@ -138,6 +148,7 @@
         const imageInput = document.getElementById('imageInput');
         const startBtn = document.getElementById('startBtn');
         const preview = document.getElementById('preview');
+        const previewContainer = document.getElementById('previewContainer');
         const board = document.getElementById('board');
         const bin = document.getElementById('bin');
         
@@ -160,14 +171,31 @@
             const reader = new FileReader();
             reader.onload = function(event) {
                 selectedImageUrl = event.target.result;
-                preview.src = selectedImageUrl;
-                preview.style.display = 'block';
                 const tempImg = new Image();
-                tempImg.onload = function() { imgW = tempImg.width; imgH = tempImg.height; };
+                tempImg.onload = function() { 
+                    imgW = tempImg.width; 
+                    imgH = tempImg.height; 
+                    updatePreviewSize(); // 사진 로드 후 크기 계산
+                };
                 tempImg.src = selectedImageUrl;
             };
             reader.readAsDataURL(file);
         });
+
+        // 📍 미리보기 크기를 완성판과 똑같이 설정하는 함수
+        function updatePreviewSize() {
+            const isWide = window.innerWidth >= 800;
+            const maxBase = isWide ? Math.min(window.innerWidth / 2 - 100, 420) : Math.min(window.innerWidth - 40, 360);
+            
+            let displayW, displayH;
+            if (imgW >= imgH) { displayW = maxBase; displayH = (imgH / imgW) * maxBase; }
+            else { displayH = maxBase; displayW = (imgW / imgH) * maxBase; }
+
+            preview.style.width = displayW + 'px';
+            preview.style.height = displayH + 'px';
+            preview.src = selectedImageUrl;
+            previewContainer.style.display = 'flex';
+        }
 
         startBtn.addEventListener('click', function() {
             if (!selectedImageUrl) { alert("사진을 선택해 주세요! 😊"); return; }
@@ -230,7 +258,7 @@
             if (activePiece) return;
             
             activePiece = this;
-            activePiece.classList.remove('returning', 'is-correct');
+            activePiece.classList.remove('is-correct');
             activePiece.classList.add('dragging');
             
             const event = e.type.includes('touch') ? e.touches[0] : e;
@@ -246,11 +274,9 @@
         function moveDrag(e) {
             if (!activePiece) return;
             e.preventDefault();
-
             const event = e.type.includes('touch') ? e.touches[0] : e;
             const dx = event.clientX - startX;
             const dy = event.clientY - startY;
-
             activePiece.style.transform = `translate(${dx}px, ${dy}px) scale(1.1)`;
         }
 
@@ -280,9 +306,7 @@
                 activePiece.classList.add('is-correct');
                 checkWin();
             } else {
-                activePiece.classList.add('returning');
                 activePiece.style.transform = 'translate(0, 0)';
-                setTimeout(() => { activePiece.classList.remove('returning'); }, 400);
             }
 
             window.removeEventListener('mousemove', moveDrag);
@@ -308,7 +332,7 @@
                 document.body.appendChild(c);
                 c.animate([{transform:'translateY(0)',opacity:1},{transform:`translateY(100vh) rotate(360deg)`,opacity:0}], {duration: 2000, easing:'ease-out'}).onfinish=()=>c.remove();
             }
-            setTimeout(() => alert("참 잘했어요! 🥳"), 300);
+            setTimeout(() => alert("우와! 정답 자리에 쏙쏙 다 넣었네요! 대단해요! 🥳"), 300);
         }
     </script>
 </body>
